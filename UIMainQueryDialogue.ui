@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>mainQueryDialogue</class>
+ <widget class="QWidget" name="mainQueryDialogue">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1035</width>
+    <height>699</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainQueryDialogueLayout">
+   <item>
+    <widget class="QGroupBox" name="timeLocationFrame">
+     <property name="title">
+      <string>Time Location Filter</string>
+     </property>
+     <layout class="QHBoxLayout" name="timeLoationFrameLayout">
+      <item>
+       <widget class="QLabel" name="timeLimitFromLabel">
+        <property name="text">
+         <string>From:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDateTimeEdit" name="timeLimitFrom">
+        <property name="calendarPopup">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="timeLimitToLabel">
+        <property name="text">
+         <string>To:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDateTimeEdit" name="timeLimitTo">
+        <property name="calendarPopup">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="timeLimitRecent24hButton">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>30</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>24h</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="timeLimitRecent12hButton">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>30</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>12h</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="timeLimitRecent3hButton">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>30</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>3h</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="timeLimitRecent1hButton">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>30</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>1h</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>266</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="locationLimitLabel">
+        <property name="text">
+         <string>Location:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="locationLimit">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>200</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>16777215</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="modifiersFrame">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>50</height>
+      </size>
+     </property>
+     <property name="title">
+      <string>Custom Filters</string>
+     </property>
+     <layout class="QHBoxLayout" name="modifiersFrameLayout">
+      <item>
+       <widget class="QLabel" name="placeholderForModifiersFrame">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="filterFrame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>50</height>
+      </size>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QHBoxLayout" name="filterFrameLayout">
+      <item>
+       <widget class="QLabel" name="filterLabel">
+        <property name="text">
+         <string>Result Filter</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="filterLineEdit"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTableView" name="resultTable">
+     <property name="contextMenuPolicy">
+      <enum>Qt::ActionsContextMenu</enum>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
+     </property>
+     <property name="alternatingRowColors">
+      <bool>true</bool>
+     </property>
+     <property name="sortingEnabled">
+      <bool>true</bool>
+     </property>
+     <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+      <bool>true</bool>
+     </attribute>
+    </widget>
+   </item>
+  </layout>
+  <action name="actionFilter_Selected_Value">
+   <property name="text">
+    <string>Filter with selected Value</string>
+   </property>
+   <property name="toolTip">
+    <string>Filter result table using the value in the selected cell</string>
+   </property>
+  </action>
+  <action name="actionMark_Unmark_Selected_Rows">
+   <property name="text">
+    <string>Mark to Highlight Rows</string>
+   </property>
+   <property name="toolTip">
+    <string>Mark or unmark to highlight selected Rows</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
