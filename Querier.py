@@ -87,13 +87,14 @@ class RestApiQuerier(QtCore.QObject):
         loginResponse = None
         try:
             self.ui1Session = requests.Session()
-            loginResponse = self.ui1Session.post('http://'+self.connectionParameter.address+'/uiservice/rest/security/login', data={'username':'MesUser','password':'change'})
+            loginData = {'username':self.connectionParameter.username, 'password':self.connectionParameter.password}
+            loginResponse = self.ui1Session.post('http://'+self.connectionParameter.address+'/uiservice/rest/security/login', data=loginData)
             if loginResponse and loginResponse.status_code == 200:
                 self.curSession = self.ui1Session
                 self.baseUrl = 'http://'+self.connectionParameter.address+'/uiservice/rest/'
             else:
                 self.ui2Session = requests.Session()
-                loginResponse = self.ui2Session.post('http://'+self.connectionParameter.address_alt+'/uiservice/rest/security/login', data={'username':'MesUser','password':'change'})
+                loginResponse = self.ui2Session.post('http://'+self.connectionParameter.address_alt+'/uiservice/rest/security/login', data=loginData)
                 self.curSession = self.ui2Session
                 self.baseUrl = 'http://'+self.connectionParameter.address_alt+'/uiservice/rest/'
             if loginResponse and loginResponse.status_code == 200:

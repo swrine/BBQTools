@@ -45,6 +45,11 @@ class ConfigurationManager:
                 password=connectionParameter.get('password', None),
                 sid=connectionParameter.get('sid', None))
 
+        if QueryType.DB_HLC in self.connectionParameters and self.connectionParameters[QueryType.DB_HLC].password == 'BAGOS_DB_DEFAULT':
+            self.connectionParameters[QueryType.DB_HLC] = self.connectionParameters[QueryType.DB_HLC]._replace(password='bagos-1234')
+        if QueryType.REST_HLC in self.connectionParameters and self.connectionParameters[QueryType.REST_HLC].password == 'BAGOS_REST_DEFAULT':
+            self.connectionParameters[QueryType.REST_HLC] = self.connectionParameters[QueryType.REST_HLC]._replace(password='change')
+
         for unitState in configData['scada-transition-matrix']:
             self.unitStateTransitionMatrix.append(UnitStateBit(name=unitState.get('state-name', ''),
                 state_bit=unitState.get('state-bit', None),

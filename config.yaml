@@ -6,7 +6,7 @@ connection-parameters:
 - query-type: DB_HLC
   address: '172.17.204.51'
   username: 'bagos'
-  password: 'bagos-1234'
+  password: 'BAGOS_DB_DEFAULT'
   sid: 'bagos'
 - query-type: DB_TDS
   address: '172.17.204.107'
@@ -17,7 +17,9 @@ connection-parameters:
   address: '172.17.204.106:9200'
 - query-type: REST_HLC
   address: '172.17.204.71:8003'
-  address-alt: '172.17.204.72:8003'
+  address-alt: '172.17.204.72:8004'
+  username: 'MesUser'
+  password: 'BAGOS_REST_DEFAULT'
 tr-masterdata-filename: 'trmasterdata.json'
 cf-masterdata-filename: 'cfmasterdata.csv'
 scada-transition-matrix:
@@ -27,10 +29,12 @@ scada-transition-matrix:
   state-bit: 18
 - state-name: 'E-Stop'
   state-bit: 0
-- state-name: 'Fault'
-  state-bit: 2
+- state-name: 'Jam'
+  state-bit: 22
 - state-name: 'S-Fault'
   state-bit: 11
+- state-name: 'Fault'
+  state-bit: 2
 - state-name: 'Maintenance'
   state-bit: 1
 - state-name: 'DegradedPLC'
@@ -288,6 +292,7 @@ query-bundles:
       field: carrier_designator
     - modifier-name: Flight Number
       field: flight_number
+    appendix-phrase: "ORDER BY scheduled_date DESC, license_plate"
 
 - bundle-name: Early Bag Store
   bundle-content:
@@ -477,6 +482,8 @@ query-bundles:
         field: BAG_ID
       - modifier-name: TrayID
         field: TRAY_ID
+      - modifier-name: FunctionID
+        field: FUNCTIONID
       appendix-phrase: "ORDER BY eventtime DESC"
     - query-name: PCD Common Diagnostic
       query-type: DB_TDS
