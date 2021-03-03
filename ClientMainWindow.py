@@ -288,7 +288,7 @@ class ClientMainWindow(QtWidgets.QMainWindow):
 
         columnHeaders = [col['column-name'] for col in queryContent.columns]
         if cfg.cfMasterData and queryDialogue.queryName == 'Scada Telegrams':
-            columnHeaders += ['IRD', 'Unit State', 'Reference', 'Signal Text', 'Aux: Cause Text / Hidden States']
+            columnHeaders += ['IRD', 'Unit State Text', 'Reference', 'Signal Text', 'Aux: Cause Text / Hidden States']
         queryDialogue.model.setHorizontalHeaderLabels(columnHeaders)
 
         self.querierThreads[queryContent.query_type].querylaunched.emit(tabIndex, json.dumps(queryBody))
@@ -362,7 +362,7 @@ class ClientMainWindow(QtWidgets.QMainWindow):
             (resultColumns, resultData) = listize_json(queryResultDict)
             queryDialogue.model.appendRow([QtGui.QStandardItem(cell if type(cell) == str else str(cell)) for cell in resultData])
         else:
-            (resultColumns, resultData) = tablize_ts_routing_data(queryContent.base_phrase, queryResultDict)
+            (resultColumns, resultData) = tablize_special_rest_data(queryContent.base_phrase, queryResultDict, cfg.localTimezone)
             for resultRow in resultData:
                 queryDialogue.model.appendRow([QtGui.QStandardItem(cell if type(cell) == str else str(cell)) for cell in resultRow])
 

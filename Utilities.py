@@ -1,8 +1,8 @@
 import re, struct, json, csv, pytz
 from datetime import datetime
 
-def convert_time_utc_to_local(utcTime, localTimezone):
-    return datetime.strptime(utcTime, '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=pytz.utc).astimezone(localTimezone).strftime('%Y-%m-%d %H:%M:%S')
+def convert_time_utc_to_local(utcTime, localTimezone, timezoneSuffix = 'Z'):
+    return datetime.strptime(utcTime, f'%Y-%m-%dT%H:%M:%S.%f{timezoneSuffix}').replace(tzinfo=pytz.utc).astimezone(localTimezone).strftime('%Y-%m-%d %H:%M:%S')
 
 def write_json_file(filePath, content):
     with open(filePath, 'w') as writeFile:
@@ -17,12 +17,26 @@ def listize_json(dictJson):
     retData = [json.dumps(val) for val in dictJson.values()]
     return (retColumns, retData)
 
+def reduce_bag_cache(bagCacheData, localTimezone):
+    bagVoAttributes = ['lastNp', 'containerId', 'originGlobalId', 'currentGlobalId', 'leadingLpn', 'currentDestination', 'finalDestination',
+        'timeState', 'bagTagStateDerived', 'transportState', 'flags', 'exceptionToStandardFlow', 'destinationReason']
+    ret = []
+    for fullBagData in bagCacheData:
+        reducedBagData = {}
+        reducedBagData['eventtime'] = convert_time_utc_to_local(fullBagData['eventtime'], localTimezone, '+0000')
+        for attribute in bagVoAttributes:
+            reducedBagData[attribute] = fullBagData[attribute]
+        
+        ret.append(reducedBagData)
+    return ret
 
-def tablize_ts_routing_data(basePhrase, routingData):
-    if (basePhrase == 'plctable/getStandardRoutingTable' or basePhrase == 'plctable/getCurrentRoutingTable') and routingData['tableRoutingRows']:
+def tablize_special_rest_data(basePhrase, routingData, localTimezone):
+    if (basePhrase == 'plctable/getStandardRoutingTable' or basePhrase == 'plctable/getCurrentRoutingTable') and 'tableRoutingRows' in routingData:
         dataBody = routingData['tableRoutingRows']
-    elif (basePhrase == 'routing/getStandardRouting' or basePhrase == 'routing/getCurrentRouting') and routingData['data']:
+    elif (basePhrase == 'routing/getStandardRouting' or basePhrase == 'routing/getCurrentRouting') and 'data' in routingData:
         dataBody = routingData['data']['path']
+    elif (basePhrase == 'diag/bags') and 'data' in routingData:
+        dataBody = reduce_bag_cache(routingData['data'], localTimezone)
     else:
         return (['1'], [['No Result']])
 

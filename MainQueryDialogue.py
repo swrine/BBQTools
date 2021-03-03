@@ -32,6 +32,8 @@ class MainQueryDialogue(QtWidgets.QWidget):
         self.ui.locationLimit.returnPressed.connect(self.queryLaunched)
         self.ui.filterLineEdit.returnPressed.connect(self.execute_filter)
 
+        self.ui.actionFilter_Selected_Value.triggered.connect(self.filter_selected_value)
+        self.ui.actionMark_Unmark_Selected_Rows.triggered.connect(self.mark_unmark_selected_rows)
 
     def timeLimit(self):
         return (self.ui.timeLimitFrom.dateTime(), self.ui.timeLimitTo.dateTime())
@@ -98,8 +100,6 @@ class MainQueryDialogue(QtWidgets.QWidget):
 
         self.ui.resultTable.addAction(self.ui.actionMark_Unmark_Selected_Rows)
         self.ui.resultTable.addAction(self.ui.actionFilter_Selected_Value)
-        self.ui.actionFilter_Selected_Value.triggered.connect(self.filter_selected_value)
-        self.ui.actionMark_Unmark_Selected_Rows.triggered.connect(self.mark_unmark_selected_rows)
 
         self.setup_filter_field_completer()
 

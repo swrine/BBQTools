@@ -90,7 +90,7 @@ class ConfigurationManager:
     def _read_cfmasterdata(self, filename):
         cfDataCsvFilePath = os.path.join(Path(__file__).parent.absolute(), filename)
         if Path(cfDataCsvFilePath).exists():
-            csvReader = csv.reader(open(cfDataCsvFilePath, 'r'))
+            csvReader = csv.reader(open(cfDataCsvFilePath, 'r', encoding='utf8'))
             cfDataHeader = next(csvReader)
             cfColNr = {headerName.lower() : colNr for colNr, headerName in enumerate(cfDataHeader)}
             for cfData in csvReader:

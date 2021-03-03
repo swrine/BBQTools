@@ -4,7 +4,7 @@ elasticsearch-rownum-limit: 8000
 local-timezone-name: 'Asia/Shanghai'
 connection-parameters:
 - query-type: DB_HLC
-  address: '172.17.204.51'
+  address: '172.17.204.52'
   username: 'bagos'
   password: 'BAGOS_DB_DEFAULT'
   sid: 'bagos'
@@ -62,30 +62,26 @@ query-bundles:
           TO_CHAR(FROM_TZ(event_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS eventtime,
           last_np AS last_np_ird,
           NVL(tnp_lastnp_orig.id, tnp_lastnp_succ.id) AS last_np,
-          container_id       AS tray_id,
+          container_id AS tray_id,
           origin_global_id AS origin_gid,
           current_global_id AS gid,
           bag_tag_id AS lpn,
-          tdp_curdest.id     AS current_dp,
-          tdp_finaldest.id   AS final_dp,
-          substr(bst.final_sort_destination, 7, 5) AS final_dest,
-          bag_tag_state,
+          tdp_curdest.id AS curr_dp,
+          substr(bst.current_destination, 8, 4) AS curr_dest,
+          substr(bst.final_sort_destination, 8, 4) || ' ' || SUBSTR(bst.final_sort_destination, 26, 4) AS final_dest,
+          bag_tag_state AS btag_state,
           time_status,
           transport_status,
           tracking_status,
-          exception_to_standard_flow,
+          exception_to_standard_flow AS exception_to_std_flow,
           bst.actual_exc_to_std_flow,
           recirculation_count,
-          recirculation_area,
-          carrier,
-          flight_number,
-          flight_std,
-          flight_etd
+          screening_max_result_state AS hbs_state,
+          CONCAT(carrier, flight_number) AS flight,
+          TO_CHAR(FROM_TZ(flight_std, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS std
       FROM archive_bag_status   bst
           LEFT JOIN plc_unit             plu_curdest ON plu_curdest.ird = bst.current_destination
           LEFT JOIN destination_point    tdp_curdest ON plu_curdest.node_id = tdp_curdest.node_id
-          LEFT JOIN plc_unit             plu_finaldest ON plu_finaldest.ird = bst.final_sort_destination
-          LEFT JOIN destination_point    tdp_finaldest ON plu_finaldest.node_id = tdp_finaldest.node_id
           LEFT JOIN plc_unit             plu_lastnp ON plu_lastnp.ird = bst.last_np
           LEFT JOIN notification_point   tnp_lastnp_orig ON tnp_lastnp_orig.node_id_origin = plu_lastnp.node_id
           LEFT JOIN notification_point   tnp_lastnp_succ ON tnp_lastnp_succ.node_id_successor = plu_lastnp.node_id
@@ -100,6 +96,12 @@ query-bundles:
       field: current_global_id
     - modifier-name: LPN
       field: bag_tag_id
+    - modifier-name: Current DP
+      field: tdp_curdest.id
+    - modifier-name: Transport Status
+      field: transport_status
+    - modifier-name: Flight Number
+      field: flight_number
     appendix-phrase: "ORDER BY eventtime DESC"
   - query-name: ES Transport Trace
     query-type: ES
@@ -212,14 +214,87 @@ query-bundles:
       field: SUBSTR(ptr.TransportGoodsID, 1, 10)
     appendix-phrase: "ORDER BY timestamp DESC"
 
+- bundle-name: Bag Status
+  bundle-content:
+  - query-name: Current Bag Cache
+    query-type: REST_HLC
+    base-phrase: 'diag/bags'
+
+- bundle-name: HBS Data
+  bundle-content:
+  - query-name: Security Screening
+    query-type: DB_HLC
+    base-phrase: >-
+      SELECT
+          TO_CHAR(FROM_TZ(event_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS eventtime,
+          last_np AS last_np_ird,
+          tnp_lastnp_orig.id AS last_np,
+          hbs_map.location,
+          origin_global_id AS origin_gid,
+          current_global_id AS gid,
+          bag_tag_id AS lpn,
+          screening_max_result_state,
+          bag_tag_state AS btag_state,
+          time_status,
+          transport_status,
+          exception_to_standard_flow AS exception_to_std_flow,
+          CONCAT(carrier, flight_number) AS flight,
+          TO_CHAR(FROM_TZ(flight_std, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS std
+      FROM archive_bag_status   bst
+          LEFT JOIN plc_unit             plu_lastnp ON plu_lastnp.ird = bst.last_np
+          LEFT JOIN notification_point   tnp_lastnp_orig ON tnp_lastnp_orig.node_id_origin = plu_lastnp.node_id
+          LEFT JOIN hbs_np_mapping       hbs_map ON hbs_map.np_id = tnp_lastnp_orig.id AND hbs_map.location_type = 1
+    custom-conditions:
+    - condition: archlevel = 0
+    - condition: transport_status IN ('TRA_SCRN','TRA_SCRNn')
+    - condition: exception_to_standard_flow <> 'TIME_WARNING'
+    time-form: "FROM_TZ(event_time, 'UTC')"
+    location-form: "tnp_lastnp_orig.id"
+    modifiers:
+    - modifier-name: GID
+      field: current_global_id
+    - modifier-name: LPN
+      field: bag_tag_id
+    - modifier-name: Screening Max Result State
+      field: screening_max_result_state
+    - modifier-name: Flight Number
+      field: flight_number
+    appendix-phrase: "ORDER BY eventtime DESC"
+
 - bundle-name: Sortation Data
   bundle-content:
+  - query-name: BSM Messages
+    query-type: DB_HLC
+    base-phrase: >-
+      SELECT id,
+          license_plate AS lpn,
+          concat(carrier_designator, flight_number) AS flight,
+          scheduled_date AS sdd,
+          bag_message_status,
+          passenger,
+          offload_airport,
+          onward_airport,
+          record_status,
+          TO_CHAR(FROM_TZ(last_modified_time_stamp, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS last_modified_time,
+          last_modified_by,
+          version
+      FROM bag_message
+    modifiers:
+    - modifier-name: LPN
+      field: license_plate
+    - modifier-name: Scheduled Date
+      field: scheduled_date
+    - modifier-name: Carrier Designator
+      field: carrier_designator
+    - modifier-name: Flight Number
+      field: flight_number
+    appendix-phrase: "ORDER BY scheduled_date DESC, last_modified_time_stamp DESC, license_plate"
   - query-name: Flight Information
     query-type: DB_HLC
     base-phrase: >-
       SELECT flt.id AS flt_id,
         dep.id AS dep_id,
-        CONCAT(flt.carrier_designator, flt.flight_number) AS Flight,
+        CONCAT(flt.carrier_designator, flt.flight_number, flt.suffix) AS Flight,
         flt.scheduled_date AS SDD,        
         flt.operational_status,
         dep.flight_type,
@@ -227,8 +302,11 @@ query-bundles:
         TO_CHAR(FROM_TZ(dep.scheduled_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS STD,
         TO_CHAR(FROM_TZ(dep.estimated_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS ETD,
         TO_CHAR(FROM_TZ(dep.actual_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss')    AS ATD,
-        airport_terminal, aircraft_type, aircraft_stand, service_type, handling_agent,
-        flt.record_status AS flt_record_status
+        airport_terminal AS Terminal,
+        aircraft_stand AS Stand,
+        flt.record_status AS flt_record_status,
+        TO_CHAR(FROM_TZ(flt.last_modified_time_stamp, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS flt_last_modified_time,
+        flt.last_modified_by AS flt_last_modified_by
       FROM FLIGHT flt
           LEFT JOIN DEPARTURE dep ON dep.flight_id = flt.id
     modifiers:
@@ -250,7 +328,7 @@ query-bundles:
         dsr.record_status AS dsr_record_status,      
         flt.id AS flt_id,
         dep.id AS dep_id,
-        CONCAT(flt.carrier_designator, flt.flight_number) AS Flight,
+        CONCAT(flt.carrier_designator, flt.flight_number, flt.suffix) AS Flight,
         flt.scheduled_date AS SDD,        
         flt.operational_status,
         dep.flight_type,
@@ -260,7 +338,7 @@ query-bundles:
         flt.record_status AS flt_record_status
       FROM DEPARTURE_SORTATION_RULE dsr
           LEFT JOIN CRD_MAPPING crd ON crd.role = 'SortAllocation' AND crd.mapping_key = dsr.sort_destination_point
-          LEFT JOIN DEPARTURE dep ON dep.flight_id = dsr.departure_id
+          LEFT JOIN DEPARTURE dep ON dep.id = dsr.departure_id
           LEFT JOIN FLIGHT flt ON flt.id = dep.flight_id
     appendix-phrase: "ORDER BY crd.crd, dsr.close_time"
     modifiers:
@@ -270,29 +348,32 @@ query-bundles:
       field: flt.carrier_designator
     - modifier-name: Flight Number
       field: flt.flight_number
-  - query-name: BSM Messages
+  - query-name: Flight Onward Destinations
     query-type: DB_HLC
     base-phrase: >-
-      SELECT id,
-          license_plate AS lpn,
-          concat(carrier_designator, flight_number) AS flight,
-          scheduled_date AS sdd,
-          bag_message_status,
-          passenger,
-          offload_airport,
-          onward_airport,
-          record_status
-      FROM bag_message
+      SELECT flt.id AS flt_id,
+        dep.id      AS dep_id,
+        onw.id      AS onw_id,
+        flt.scheduled_date,
+        CONCAT(flt.carrier_designator, flt.flight_number, flt.suffix) AS Flight,
+        flt.operational_status,
+        dep.next_airport AS dep_next_airport,
+        onw.sequence AS onw_sequence,
+        onw.last_onward_airport,
+        onw.record_status AS onw_record_status,
+        TO_CHAR(FROM_TZ(onw.last_modified_time_stamp, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS onw_last_modified_time,
+        onw.version AS onw_version
+      FROM ONWARD_DESTINATION onw
+      LEFT JOIN DEPARTURE dep ON onw.departure_id = dep.id 
+      LEFT JOIN FLIGHT flt ON dep.flight_id = flt.id
+    appendix-phrase: "ORDER BY flt.scheduled_date DESC, flt.carrier_designator, flt.flight_number, onw.sequence"
     modifiers:
-    - modifier-name: LPN
-      field: license_plate
     - modifier-name: Scheduled Date
-      field: scheduled_date
+      field: flt.scheduled_date
     - modifier-name: Carrier Designator
-      field: carrier_designator
+      field: flt.carrier_designator
     - modifier-name: Flight Number
-      field: flight_number
-    appendix-phrase: "ORDER BY scheduled_date DESC, license_plate"
+      field: flt.flight_number
 
 - bundle-name: Early Bag Store
   bundle-content:
@@ -665,7 +746,6 @@ query-bundles:
     query-type: DB_HLC
     base-phrase: >-
       SELECT
-          TO_CHAR(FROM_TZ(ele.client_date, 'UTC') AT TIME ZONE '+08:00', 'YYYY-MM-DD HH24:MI:SS.FF3') AS client_date,
           TO_CHAR(FROM_TZ(ela.begin_timestamp, 'UTC') AT TIME ZONE '+08:00', 'YYYY-MM-DD HH24:MI:SS.FF3') AS begin_time,
           TO_CHAR(FROM_TZ(ela.end_timestamp, 'UTC') AT TIME ZONE '+08:00', 'YYYY-MM-DD HH24:MI:SS.FF3') AS end_time,
           ele.event_type,
