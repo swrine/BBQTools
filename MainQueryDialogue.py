@@ -78,7 +78,7 @@ class MainQueryDialogue(QtWidgets.QWidget):
     def update_timelimit_to_recent(self, h):
         nowDateTime = QtCore.QDateTime.currentDateTime()
         self.ui.timeLimitFrom.setDateTime(nowDateTime.addSecs(-h*3600))
-        self.ui.timeLimitTo.setDateTime(nowDateTime)
+        self.ui.timeLimitTo.setDateTime(nowDateTime.addSecs(3600))
     
     def setup_filter_field_completer(self):
         filterFieldCompleterList = []
