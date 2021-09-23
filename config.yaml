@@ -4,23 +4,22 @@ elasticsearch-rownum-limit: 8000
 local-timezone-name: 'Asia/Shanghai'
 connection-parameters:
 - query-type: DB_HLC
-  address: '172.17.204.52'
+  address: '10.50.21.51'
+  address-alt: '10.50.21.52'
   username: 'bagos'
   password: 'BAGOS_DB_DEFAULT'
   sid: 'bagos'
 - query-type: DB_TDS
-  address: '172.17.204.107'
+  address: '10.50.21.107'
   username: 'diag'
   password: 'diag'
   sid: 'xe'
 - query-type: ES
-  address: '172.17.204.106:9200'
+  address: '10.50.21.106:9200'
 - query-type: REST_HLC
-  address: '172.17.204.71:8003'
-  address-alt: '172.17.204.72:8004'
-  username: 'MesUser'
-  password: 'BAGOS_REST_DEFAULT'
-tr-masterdata-filename: 'trmasterdata.json'
+  address: '10.50.21.61:8001'
+  address-alt: '10.50.21.62:8002'
+tr-masterdata-filename: 'KMG_trmasterdata.json'
 cf-masterdata-filename: 'cfmasterdata.csv'
 scada-transition-matrix:
 - state-name: 'Not Connected'
@@ -66,9 +65,9 @@ query-bundles:
           origin_global_id AS origin_gid,
           current_global_id AS gid,
           bag_tag_id AS lpn,
-          tdp_curdest.id AS curr_dp,
-          substr(bst.current_destination, 8, 4) AS curr_dest,
-          substr(bst.final_sort_destination, 8, 4) || ' ' || SUBSTR(bst.final_sort_destination, 26, 4) AS final_dest,
+          NVL(tdp_curdest.id, crd_curdest.mapping_key) AS curr_dp,
+          bst.current_destination AS curr_dest,
+          bst.final_sort_destination AS final_dest,
           bag_tag_state AS btag_state,
           time_status,
           transport_status,
@@ -82,6 +81,7 @@ query-bundles:
       FROM archive_bag_status   bst
           LEFT JOIN plc_unit             plu_curdest ON plu_curdest.ird = bst.current_destination
           LEFT JOIN destination_point    tdp_curdest ON plu_curdest.node_id = tdp_curdest.node_id
+          LEFT JOIN crd_mapping          crd_curdest ON crd_curdest.crd = bst.current_destination AND crd_curdest.role = 'defaultRole' and crd_curdest.mapping_type = 'DP'
           LEFT JOIN plc_unit             plu_lastnp ON plu_lastnp.ird = bst.last_np
           LEFT JOIN notification_point   tnp_lastnp_orig ON tnp_lastnp_orig.node_id_origin = plu_lastnp.node_id
           LEFT JOIN notification_point   tnp_lastnp_succ ON tnp_lastnp_succ.node_id_successor = plu_lastnp.node_id
@@ -97,7 +97,7 @@ query-bundles:
     - modifier-name: LPN
       field: bag_tag_id
     - modifier-name: Current DP
-      field: tdp_curdest.id
+      field: NVL(tdp_curdest.id, crd_curdest.mapping_key)
     - modifier-name: Transport Status
       field: transport_status
     - modifier-name: Flight Number
@@ -218,7 +218,10 @@ query-bundles:
   bundle-content:
   - query-name: Current Bag Cache
     query-type: REST_HLC
-    base-phrase: 'diag/bags'
+    base-phrase: 'V1/bagcache'
+    modifiers: 
+    - modifier-name: GID
+      field: '/gid'
 
 - bundle-name: HBS Data
   bundle-content:
@@ -294,7 +297,7 @@ query-bundles:
     base-phrase: >-
       SELECT flt.id AS flt_id,
         dep.id AS dep_id,
-        CONCAT(flt.carrier_designator, flt.flight_number, flt.suffix) AS Flight,
+        CONCAT(flt.carrier_designator, flt.flight_number) AS Flight,
         flt.scheduled_date AS SDD,        
         flt.operational_status,
         dep.flight_type,
@@ -328,7 +331,7 @@ query-bundles:
         dsr.record_status AS dsr_record_status,      
         flt.id AS flt_id,
         dep.id AS dep_id,
-        CONCAT(flt.carrier_designator, flt.flight_number, flt.suffix) AS Flight,
+        CONCAT(flt.carrier_designator, flt.flight_number) AS Flight,
         flt.scheduled_date AS SDD,        
         flt.operational_status,
         dep.flight_type,
@@ -355,7 +358,7 @@ query-bundles:
         dep.id      AS dep_id,
         onw.id      AS onw_id,
         flt.scheduled_date,
-        CONCAT(flt.carrier_designator, flt.flight_number, flt.suffix) AS Flight,
+        CONCAT(flt.carrier_designator, flt.flight_number) AS Flight,
         flt.operational_status,
         dep.next_airport AS dep_next_airport,
         onw.sequence AS onw_sequence,
@@ -395,9 +398,9 @@ query-bundles:
             , carr.ident_locn AS Identi_Location
             , CASE WHEN carr.move_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(carr.move_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS LastMove_Time
             , CASE WHEN tidc.updt_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.updt_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Tidc_Update_Time
-        FROM FD_HAK571_LIVE.CARR carr
-        LEFT JOIN FD_HAK571_LIVE.CALO calo ON calo.carr = carr.carr
-        LEFT JOIN FD_HAK571_LIVE.TIDC tidc ON tidc.trayno = carr.carr
+        FROM FD_KMG572_LIVE.CARR carr
+        LEFT JOIN FD_KMG572_LIVE.CALO calo ON calo.carr = carr.carr
+        LEFT JOIN FD_KMG572_LIVE.TIDC tidc ON tidc.trayno = carr.carr
       modifiers:
       - modifier-name: Location
         field: calo.locn
@@ -421,7 +424,7 @@ query-bundles:
             , CASE WHEN tidc.flgtedt <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.flgtedt, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS ETD
             , tidc.mupdest AS MuDest
             , CASE WHEN tidc.updt_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.updt_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Tidc_Update_Time
-        from FD_HAK571_LIVE.TIDC
+        from FD_KMG572_LIVE.TIDC
       modifiers:
       - modifier-name: Location
         field: tidc.locn
@@ -434,7 +437,7 @@ query-bundles:
       - modifier-name: Flight
         field: tidc.flgtno
       custom-conditions:
-      - condition: 'trayno NOT IN (SELECT carr FROM FD_HAK571_LIVE.CARR)'
+      - condition: 'trayno NOT IN (SELECT carr FROM FD_KMG572_LIVE.CARR)'
       appendix-phrase: 'ORDER BY tidc.updt_dttm DESC'
     - query-name: Store Control Items
       query-type: DB_HLC
@@ -489,6 +492,34 @@ query-bundles:
         field: SDD
       - modifier-name: Flight
         field: Flight
+    - query-name: RQSB Retrieval Request
+      query-type: DB_HLC
+      base-phrase: >-
+        SELECT
+            rqsbid AS request_id,
+            trayno AS tray_id,
+            exit_locn AS exit,
+            altexit_locn AS alt_exit,
+            CASE
+                WHEN rqsbstat = 1 THEN '1 - Created'
+                WHEN rqsbstat = 2 THEN '2 - Started'
+                WHEN rqsbstat = 3 THEN '3 - Activated'
+                WHEN rqsbstat = 4 THEN '4 - Cancelled'
+                WHEN rqsbstat = 5 THEN '5 - Finished'
+            END AS status,
+            rqsbtype AS type,
+            ordrprio AS priority,
+            TO_CHAR(FROM_TZ(TO_TIMESTAMP(updt_dttm, 'YYYYMMDDHH24MISS'), 'UTC') AT TIME ZONE '+08:00', 'YYYY-MM-DD HH24:MI:SS') AS eventtime
+        FROM FD_KMG572_LIVE.RQSB
+      time-form: "FROM_TZ(TO_TIMESTAMP(updt_dttm, 'YYYYMMDDHH24MISS'), 'UTC')"
+      modifiers:
+      - modifier-name: TrayID
+        field: trayno
+      - modifier-name: Exit
+        field: exit_locn
+      - modifier-name: Status Number
+        field: rqsbstat
+      appendix-phrase: 'ORDER BY rqsb.updt_dttm DESC'
 
 - bundle-name: Empty Tray Store
   bundle-content:
@@ -709,7 +740,7 @@ query-bundles:
   bundle-content:
   - query-name: Get Standard Routing
     query-type: REST_HLC
-    base-phrase: 'routing/getStandardRouting'
+    base-phrase: 'V1/routing/standard'
     modifiers: 
     - modifier-name: From NP
       field: npId
@@ -717,7 +748,7 @@ query-bundles:
       field: dpId
   - query-name: Get Current Routing
     query-type: REST_HLC
-    base-phrase: 'routing/getCurrentRouting'
+    base-phrase: 'V1/routing/current'
     modifiers: 
     - modifier-name: From NP
       field: npId
@@ -725,20 +756,20 @@ query-bundles:
       field: dpId
   - query-name: Standard Routing Table
     query-type: REST_HLC
-    base-phrase: 'plctable/getStandardRoutingTable'
+    base-phrase: 'V1/routing/standard/tables'
     modifiers: 
     - modifier-name: PLC ID
-      field: plcId
+      field: '/plcId'
     - modifier-name: UnitID
-      field: unitId
+      field: '/unitId'
   - query-name: Current Routing Table
     query-type: REST_HLC
-    base-phrase: 'plctable/getCurrentRoutingTable'
+    base-phrase: 'V1/routing/current/tables'
     modifiers: 
     - modifier-name: PLC ID
-      field: plcId
+      field: '/plcId'
     - modifier-name: UnitID
-      field: unitId
+      field: '/unitId'
 
 - bundle-name: Event Logs
   bundle-content:
