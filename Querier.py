@@ -20,17 +20,25 @@ class DatabaseQuerier(QtCore.QObject):
         super(DatabaseQuerier, self).__init__()
         self.name = dbName
         self.connectionParameter = connectionParameter
+        self.connected = False
 
-    @pyqtSlot()
-    def establish_connection(self):
+    def try_connect(self, addr):
         try:
-            self.db = cx_Oracle.connect(self.connectionParameter.username, self.connectionParameter.password, self.connectionParameter.address+'/'+self.connectionParameter.sid)
+            self.db = cx_Oracle.connect(self.connectionParameter.username, self.connectionParameter.password, addr+'/'+self.connectionParameter.sid)
             self.cursor = self.db.cursor()
 
+            self.connected = True
             self.connectionstatusupdated.emit(self.name, True)
         except Exception:
             self.cursor = self.db = None
-            logger.exception("Connect attempt to %s Database failed.", self.name)
+            self.connected = False
+            logger.exception("Connect attempt to Database %s at %s failed.", self.name, addr)
+
+    @pyqtSlot()
+    def establish_connection(self):
+        self.try_connect(self.connectionParameter.address)
+        if not self.connected and self.connectionParameter.address_alt:
+            self.try_connect(self.connectionParameter.address_alt)
 
     @pyqtSlot(int, str)
     def launch_query(self, tabIndex, query):
@@ -82,30 +90,25 @@ class RestApiQuerier(QtCore.QObject):
         self.connectionParameter = connectionParameter
         self.connected = False
 
+    def try_connect(self, addr):
+        connResponse = None
+        try:
+            connResponse = requests.get('http://'+addr+'/bagos/rest/ping', timeout=5)
+            if connResponse and connResponse.status_code == 200 and connResponse.text == "pong":
+                self.connected = True
+                self.baseUrl = 'http://'+addr+'/bagos/rest/'
+        except Exception:
+            logger.error('Connection attempt to %s failed.', addr)
+
     @pyqtSlot()
     def establish_connection(self):
-        loginResponse = None
-        try:
-            self.ui1Session = requests.Session()
-            loginData = {'username':self.connectionParameter.username, 'password':self.connectionParameter.password}
-            loginResponse = self.ui1Session.post('http://'+self.connectionParameter.address+'/uiservice/rest/security/login', data=loginData)
-            if loginResponse and loginResponse.status_code == 200:
-                self.curSession = self.ui1Session
-                self.baseUrl = 'http://'+self.connectionParameter.address+'/uiservice/rest/'
-            else:
-                self.ui2Session = requests.Session()
-                loginResponse = self.ui2Session.post('http://'+self.connectionParameter.address_alt+'/uiservice/rest/security/login', data=loginData)
-                self.curSession = self.ui2Session
-                self.baseUrl = 'http://'+self.connectionParameter.address_alt+'/uiservice/rest/'
-            if loginResponse and loginResponse.status_code == 200:
-                self.connected = True
-        except Exception as e:
-            logger.exception(e)
-        finally:
-            self.connectionstatusupdated.emit(QueryType.REST_HLC, self.connected)
-            if not self.connected:
-                logger.error('REST API cannot establish Connection:%s.', loginResponse.status_code if loginResponse else 'StatusCode N/A')
-        
+        self.try_connect(self.connectionParameter.address)
+        if not self.connected and self.connectionParameter.address_alt:
+            self.try_connect(self.connectionParameter.address_alt)
+
+        self.connectionstatusupdated.emit(QueryType.REST_HLC, self.connected)
+        if not self.connected:
+            logger.error('REST API cannot establish Connection.')
 
     @pyqtSlot(int, str)
     def launch_query(self, tabIndex, query):
@@ -113,11 +116,11 @@ class RestApiQuerier(QtCore.QObject):
             if not self.connected:
                 raise Exception('REST API query failed: Not connected.')
 
-            queryResponse = self.curSession.get(self.baseUrl+query, headers={'Content-Type':'application/json'})
+            queryResponse = requests.get(self.baseUrl+query, headers={'Content-Type':'application/json'})
 
             if queryResponse.status_code == 200:
                 self.queryfinished.emit(tabIndex, queryResponse.text)
             else:
-                raise Exception('REST API query failed. Status Code:' + queryResponse.status_code)
+                raise Exception('REST API query failed. Status Code:', queryResponse.status_code)
         except Exception as e:
             logger.exception(e)

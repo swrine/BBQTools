@@ -346,9 +346,13 @@ class ClientMainWindow(QtWidgets.QMainWindow):
 
         modifiersPhrase = ''
         for (field, content) in queryDialogue.modifiers():
-            modifiersPhrase += ('&' if len(modifiersPhrase) > 0 else '') + field + '=' + content
+            if field[0:1] == '/':
+                modifiersPhrase += '/' + content
+            else:
+                modifiersPhrase += ('&' if len(modifiersPhrase) > 0 else '?') + field + '=' + content
+        logger.info(queryContent.base_phrase + modifiersPhrase) # TBR
 
-        self.querierThreads[queryContent.query_type].querylaunched.emit(tabIndex, queryContent.base_phrase+'?'+modifiersPhrase)
+        self.querierThreads[queryContent.query_type].querylaunched.emit(tabIndex, queryContent.base_phrase + modifiersPhrase)
 
     @pyqtSlot(int, str)
     def display_restapi_query_result(self, tabIndex, queryResult):
@@ -358,7 +362,8 @@ class ClientMainWindow(QtWidgets.QMainWindow):
         queryDialogue.model = QtGui.QStandardItemModel(queryDialogue)
 
         queryResultDict = json.loads(queryResult)
-        if 'statusCode'in queryResultDict and queryResultDict['statusCode'] != 'SUCCESS':
+        logger.info(queryResultDict)
+        if ('statusCode'in queryResultDict and queryResultDict['statusCode'] != 'SUCCESS') or ('bagcache' in queryContent.base_phrase):
             (resultColumns, resultData) = listize_json(queryResultDict)
             queryDialogue.model.appendRow([QtGui.QStandardItem(cell if type(cell) == str else str(cell)) for cell in resultData])
         else:
