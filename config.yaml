@@ -137,7 +137,7 @@ query-bundles:
     - column-name: TimeState
       field: TimeState
     - column-name: OperState
-      field: OperationalState 
+      field: OperationalState
     - column-name: BT
       field: BagTagStateDerived
     - column-name: LD
@@ -152,13 +152,13 @@ query-bundles:
       field: SDD
     - column-name: Payload
       field: message_payload
-    modifiers: 
+    modifiers:
     - modifier-name: TELEGRAM
       field: TELEGRAM.keyword
     - modifier-name: NP
-      field: NP_ID.keyword        
+      field: NP_ID.keyword
     - modifier-name: TrayID
-      field: CONT_ID.keyword        
+      field: CONT_ID.keyword
     - modifier-name: GID
       field: GLOBAL_ID.keyword
     - modifier-name: LPN
@@ -199,13 +199,13 @@ query-bundles:
       field: ROUTING_INFO
     - column-name: Payload
       field: message_payload
-    modifiers: 
+    modifiers:
     - modifier-name: TELEGRAM
       field: TELEGRAM.keyword
     - modifier-name: NP
-      field: NP_ID.keyword        
+      field: NP_ID.keyword
     - modifier-name: TrayID
-      field: TRAY_ID.keyword        
+      field: TRAY_ID.keyword
     - modifier-name: GID
       field: GLOBAL_ID.keyword
     - modifier-name: LPN
@@ -262,7 +262,7 @@ query-bundles:
   - query-name: Current Bag Cache
     query-type: REST_HLC
     base-phrase: 'V1/bagcache'
-    modifiers: 
+    modifiers:
     - modifier-name: GID
       field: '/gid'
 
@@ -341,7 +341,7 @@ query-bundles:
       SELECT flt.id AS flt_id,
         dep.id AS dep_id,
         CONCAT(flt.carrier_designator, flt.flight_number) AS Flight,
-        flt.scheduled_date AS SDD,        
+        flt.scheduled_date AS SDD,
         flt.operational_status,
         dep.flight_type,
         dep.next_airport,
@@ -371,11 +371,11 @@ query-bundles:
         crd.crd AS SortDest_CRD,
         TO_CHAR(FROM_TZ(dsr.open_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss')    AS OpenTime,
         TO_CHAR(FROM_TZ(dsr.close_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss')    AS CloseTime,
-        dsr.record_status AS dsr_record_status,      
+        dsr.record_status AS dsr_record_status,
         flt.id AS flt_id,
         dep.id AS dep_id,
         CONCAT(flt.carrier_designator, flt.flight_number) AS Flight,
-        flt.scheduled_date AS SDD,        
+        flt.scheduled_date AS SDD,
         flt.operational_status,
         dep.flight_type,
         dep.next_airport,
@@ -410,7 +410,7 @@ query-bundles:
         TO_CHAR(FROM_TZ(onw.last_modified_time_stamp, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS onw_last_modified_time,
         onw.version AS onw_version
       FROM ONWARD_DESTINATION onw
-      LEFT JOIN DEPARTURE dep ON onw.departure_id = dep.id 
+      LEFT JOIN DEPARTURE dep ON onw.departure_id = dep.id
       LEFT JOIN FLIGHT flt ON dep.flight_id = flt.id
     appendix-phrase: "ORDER BY flt.scheduled_date DESC, flt.carrier_designator, flt.flight_number, onw.sequence"
     modifiers:
@@ -432,12 +432,12 @@ query-bundles:
             , calo.locn AS Location
             , CASE WHEN carr.arvl_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(carr.arvl_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Arrival_Time
             , carr.globalid AS GID
-            , tidc.bagtag AS LPN  
+            , tidc.bagtag AS LPN
             , tidc.flgtno AS Flight
-            , CASE WHEN tidc.flgtot <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.flgtot, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Open_Time    
+            , CASE WHEN tidc.flgtot <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.flgtot, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Open_Time
             , CASE WHEN tidc.flgtedt <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.flgtedt, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS ETD
             , tidc.mupdest AS MuDest
-            , CASE WHEN carr.ident_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(carr.ident_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Identi_Time    
+            , CASE WHEN carr.ident_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(carr.ident_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Identi_Time
             , carr.ident_locn AS Identi_Location
             , CASE WHEN carr.move_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(carr.move_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS LastMove_Time
             , CASE WHEN tidc.updt_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.updt_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Tidc_Update_Time
@@ -461,9 +461,9 @@ query-bundles:
         select tidc.trayno AS trayid
             , tidc.locn AS Location
             , tidc.globalid AS gid
-            , tidc.bagtag AS lpn    
+            , tidc.bagtag AS lpn
             , tidc.flgtno AS Flight
-            , CASE WHEN tidc.flgtot <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.flgtot, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Open_Time    
+            , CASE WHEN tidc.flgtot <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.flgtot, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Open_Time
             , CASE WHEN tidc.flgtedt <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.flgtedt, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS ETD
             , tidc.mupdest AS MuDest
             , CASE WHEN tidc.updt_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.updt_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Tidc_Update_Time
@@ -496,8 +496,8 @@ query-bundles:
                 , CONCAT(sti.carrier_code, sti.flight_number) AS Flight
                 , sti.flight_scheduled_date AS SDD
                 , NULL AS Tray_Maintenance_State
-                , TO_CHAR(FROM_TZ(sti.created_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS created_time    
-                , TO_CHAR(FROM_TZ(sti.delivery_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS delivery_time    
+                , TO_CHAR(FROM_TZ(sti.created_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS created_time
+                , TO_CHAR(FROM_TZ(sti.delivery_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS delivery_time
                 , TO_CHAR(FROM_TZ(sti.expected_release_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS expected_release_time
                 , TO_CHAR(FROM_TZ(sti.release_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS release_time
                 , TO_CHAR(FROM_TZ(sti.release_confirmation_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS release_confirmation_time
@@ -701,7 +701,7 @@ query-bundles:
         field: logging_method
       - column-name: Payload
         field: message_payload
-      modifiers: 
+      modifiers:
       - modifier-name: PLC
         field: '^connection_name'
       custom-conditions:
@@ -751,7 +751,7 @@ query-bundles:
       - column-name: Time
         field: '@timestamp'
       - column-name: Log Level
-        field: log_level        
+        field: log_level
       - column-name: Connection Name
         field: connection_name
       - column-name: Telegram
@@ -777,14 +777,14 @@ query-bundles:
             { "bool": { "must": [
               {"match":{"logs_type.keyword":"plc"}},
               {"match_phrase":{"log.file.path":"TIMConnections"}},
-              {"query_string":{"fields":["message"],"query":"error OR warn"}} ]}} ]}}      
+              {"query_string":{"fields":["message"],"query":"error OR warn"}} ]}} ]}}
 
 - bundle-name: REST Routing Information
   bundle-content:
   - query-name: Get Standard Routing
     query-type: REST_HLC
     base-phrase: 'V1/routing/standard'
-    modifiers: 
+    modifiers:
     - modifier-name: From NP
       field: npId
     - modifier-name: To DP
@@ -792,7 +792,7 @@ query-bundles:
   - query-name: Get Current Routing
     query-type: REST_HLC
     base-phrase: 'V1/routing/current'
-    modifiers: 
+    modifiers:
     - modifier-name: From NP
       field: npId
     - modifier-name: To DP
@@ -800,7 +800,7 @@ query-bundles:
   - query-name: Standard Routing Table
     query-type: REST_HLC
     base-phrase: 'V1/routing/standard/tables'
-    modifiers: 
+    modifiers:
     - modifier-name: PLC ID
       field: '/plcId'
     - modifier-name: UnitID
@@ -808,7 +808,7 @@ query-bundles:
   - query-name: Current Routing Table
     query-type: REST_HLC
     base-phrase: 'V1/routing/current/tables'
-    modifiers: 
+    modifiers:
     - modifier-name: PLC ID
       field: '/plcId'
     - modifier-name: UnitID
