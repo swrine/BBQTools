@@ -127,7 +127,7 @@ query-bundles:
     - column-name: DP
       field: DP_ID
     - column-name: Tray ID
-      field: TRAY_ID
+      field: CONT_ID
     - column-name: GID
       field: GLOBAL_ID
     - column-name: LPN
@@ -158,6 +158,53 @@ query-bundles:
     - modifier-name: NP
       field: NP_ID.keyword        
     - modifier-name: TrayID
+      field: CONT_ID.keyword        
+    - modifier-name: GID
+      field: GLOBAL_ID.keyword
+    - modifier-name: LPN
+      field: LPN.keyword
+    custom-conditions:
+    - condition: >-
+        { "bool": {"must": [{"exists":{"field":"EXECUTION_TIME"}},
+            {"query_string": {"fields": ["MODULE"], "query": "transportcontrol OR traycontrol OR traytransportcontrol OR storecontrol OR emptytraymanagement OR sortation" }}],
+          "must_not": [{ "match": {"METHOD.keyword": "setNumberOfRequiredEmptyTrays"}}] }}
+  - query-name: ES TIM Logs
+    query-type: ES
+    time-form: '@timestamp'
+    location-form: '_PREDEFINED'
+    columns:
+    - column-name: Time
+      field: '@timestamp'
+    - column-name: Telegram
+      field: TELEGRAM
+    - column-name: Node
+      field: PLC_ID
+    - column-name: Unit
+      field: UNIT_ID
+    - column-name: NP
+      field: NP_ID
+    - column-name: DP
+      field: DP_ID
+    - column-name: Tray ID
+      field: TRAY_ID
+    - column-name: GID
+      field: GLOBAL_ID
+    - column-name: LPN
+      field: LPN
+    - column-name: LD
+      field: LOADING_STATE
+    - column-name: RT
+      field: ROUTING_TABLE_ID
+    - column-name: RI
+      field: ROUTING_INFO
+    - column-name: Payload
+      field: message_payload
+    modifiers: 
+    - modifier-name: TELEGRAM
+      field: TELEGRAM.keyword
+    - modifier-name: NP
+      field: NP_ID.keyword        
+    - modifier-name: TrayID
       field: TRAY_ID.keyword        
     - modifier-name: GID
       field: GLOBAL_ID.keyword
@@ -165,12 +212,8 @@ query-bundles:
       field: LPN.keyword
     custom-conditions:
     - condition: >-
-        {"bool": {"minimum_should_match": 1, "should": [
-          { "bool": {"must": [{"exists":{"field":"EXECUTION_TIME"}},
-              {"query_string": {"fields": ["MODULE"], "query": "transportcontrol OR traycontrol OR traytransportcontrol OR storecontrol OR emptytraymanagement OR sortation" }}],
-            "must_not": [{ "match": {"METHOD.keyword": "setNumberOfRequiredEmptyTrays"}}] }},
-          { "bool": {"must": [{"match":{"logging_method.keyword":"debugTIMTelegram"}},
-            {"query_string":{"fields":["TELEGRAM.keyword"], "query":"3_DR OR 3_DS OR 3_RN OR 3_RD OR 3_CL OR 3_XO"}}] }} ]}}
+        { "bool": {"must": [{"match":{"logging_method.keyword":"debugTIMTelegram"}},
+          {"query_string":{"fields":["TELEGRAM.keyword"], "query":"3_DR OR 3_DS OR 3_RN OR 3_RD OR 3_CL OR 3_XO"}}] }}
   - query-name: TDS TU Tracking
     query-type: DB_TDS
     base-phrase: >-
