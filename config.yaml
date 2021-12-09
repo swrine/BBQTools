@@ -367,22 +367,24 @@ query-bundles:
   - query-name: Flight Sortation Allocation
     query-type: DB_HLC
     base-phrase: >-
-      SELECT dsr.id AS dsr_id,
-        dsr.sort_destination_point AS SortDest_DP,
-        crd.crd AS SortDest_CRD,
-        TO_CHAR(FROM_TZ(dsr.open_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss')    AS OpenTime,
-        TO_CHAR(FROM_TZ(dsr.close_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss')    AS CloseTime,
-        dsr.record_status AS dsr_record_status,
-        flt.id AS flt_id,
+      SELECT flt.id AS flt_id,
         dep.id AS dep_id,
+        dsr.id AS dsr_id,
         CONCAT(flt.carrier_designator, flt.flight_number) AS Flight,
         flt.scheduled_date AS SDD,
+        dsr.sort_destination_point AS Dest_DP,
+        crd.crd AS Dest_CRD,
+        TO_CHAR(FROM_TZ(dsr.open_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS OpenTime,
+        TO_CHAR(FROM_TZ(dsr.close_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS CloseTime,
         flt.operational_status,
         dep.flight_type,
         dep.next_airport,
         TO_CHAR(FROM_TZ(dep.scheduled_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS STD,
         TO_CHAR(FROM_TZ(dep.estimated_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS ETD,
-        flt.record_status AS flt_record_status
+        flt.record_status AS flt_rec_status,
+        dep.record_status AS dep_rec_status,
+        dsr.record_status AS dsr_rec_status,
+        TO_CHAR(FROM_TZ(dsr.last_modified_time_stamp, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS dsr_last_modified_time
       FROM DEPARTURE_SORTATION_RULE dsr
           LEFT JOIN CRD_MAPPING crd ON crd.role = 'SortAllocation' AND crd.mapping_key = dsr.sort_destination_point
           LEFT JOIN DEPARTURE dep ON dep.id = dsr.departure_id
@@ -559,10 +561,10 @@ query-bundles:
             TO_CHAR(FROM_TZ(TO_TIMESTAMP(rqsb.updt_dttm, 'YYYYMMDDHH24MISS'), 'UTC') AT TIME ZONE '+08:00', 'YYYY-MM-DD HH24:MI:SS') AS eventtime
         FROM FD_KMG572_LIVE.RQSB
         LEFT JOIN FD_KMG572_LIVE.TIDC on TIDC.trayno = RQSB.trayno
-      time-form: "FROM_TZ(TO_TIMESTAMP(updt_dttm, 'YYYYMMDDHH24MISS'), 'UTC')"
+      time-form: "FROM_TZ(TO_TIMESTAMP(rqsb.updt_dttm, 'YYYYMMDDHH24MISS'), 'UTC')"
       modifiers:
       - modifier-name: TrayID
-        field: trayno
+        field: rqsb.trayno
       - modifier-name: Exit
         field: exit_locn
       - modifier-name: Status Number
