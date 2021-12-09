@@ -72,6 +72,7 @@ query-bundles:
           time_status,
           transport_status,
           tracking_status,
+          discharge_code AS context_info,
           exception_to_standard_flow AS exception_to_std_flow,
           bst.actual_exc_to_std_flow,
           recirculation_count,
@@ -540,7 +541,10 @@ query-bundles:
       base-phrase: >-
         SELECT
             rqsbid AS request_id,
-            trayno AS tray_id,
+            rqsb.trayno AS tray_id,
+            tidc.globalid AS GID,
+            tidc.bagtag AS LPN,
+            tidc.flgtno AS flight,
             exit_locn AS exit,
             altexit_locn AS alt_exit,
             CASE
@@ -552,8 +556,9 @@ query-bundles:
             END AS status,
             rqsbtype AS type,
             ordrprio AS priority,
-            TO_CHAR(FROM_TZ(TO_TIMESTAMP(updt_dttm, 'YYYYMMDDHH24MISS'), 'UTC') AT TIME ZONE '+08:00', 'YYYY-MM-DD HH24:MI:SS') AS eventtime
+            TO_CHAR(FROM_TZ(TO_TIMESTAMP(rqsb.updt_dttm, 'YYYYMMDDHH24MISS'), 'UTC') AT TIME ZONE '+08:00', 'YYYY-MM-DD HH24:MI:SS') AS eventtime
         FROM FD_KMG572_LIVE.RQSB
+        LEFT JOIN FD_KMG572_LIVE.TIDC on TIDC.trayno = RQSB.trayno
       time-form: "FROM_TZ(TO_TIMESTAMP(updt_dttm, 'YYYYMMDDHH24MISS'), 'UTC')"
       modifiers:
       - modifier-name: TrayID
