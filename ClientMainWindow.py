@@ -22,8 +22,8 @@ cfg = ConfigurationManager()
 
 class ClientMainWindow(QtWidgets.QMainWindow):
     querierstarted = QtCore.pyqtSignal()
-    hlcDatabaseQueryLaunched = QtCore.pyqtSignal(int, str)
-    tdsDatabaseQueryLaunched = QtCore.pyqtSignal(int, str)
+    hlcDatabaseQueryLaunched = QtCore.pyqtSignal(int, str, int)
+    tdsDatabaseQueryLaunched = QtCore.pyqtSignal(int, str, int)
     elasticsearchQueryLaunched = QtCore.pyqtSignal(int, str)
     restApiQueryLaunched = QtCore.pyqtSignal(int, str)
 
@@ -34,7 +34,9 @@ class ClientMainWindow(QtWidgets.QMainWindow):
 
         self.ui.detailsDock.hide()
 
-        self.ui.testButton.clicked.connect(self.test_button_onclick)
+        #self.ui.testButton.clicked.connect(self.test_button_onclick)
+        self.ui.testButton.hide() #Hide 'Test' button, which is only used for DEV purporse
+
         self.ui.runButton.clicked.connect(self.run_button_onclick)
         self.ui.queryBundleTree.itemDoubleClicked.connect(self.query_selected)
         self.ui.queryTabs.tabBar().tabBarDoubleClicked.connect(lambda tabIndex: self.ui.queryTabs.removeTab(tabIndex))
@@ -185,7 +187,7 @@ class ClientMainWindow(QtWidgets.QMainWindow):
 
 
     @pyqtSlot()
-    def test_button_onclick(self):
+    def test_button_onclick(self): #Button hidden in standard version, can be re-enabled in future DEV version
         print(match_cfunit_state(4, cfg.unitStateTransitionMatrix))
         print(match_cfunit_state(1, cfg.unitStateTransitionMatrix))
         print(match_cfunit_state(8, cfg.unitStateTransitionMatrix))
@@ -204,6 +206,7 @@ class ClientMainWindow(QtWidgets.QMainWindow):
     def launch_database_query(self, tabIndex):
         queryDialogue = self.ui.queryTabs.widget(tabIndex)
         queryContent = cfg.queries[queryDialogue.queryName]
+        connIndex = queryContent.static_connection_index
 
         query = queryContent.base_phrase
         query += f" WHERE (ROWNUM <= {cfg.databaseRownumLimit}) "
@@ -233,7 +236,7 @@ class ClientMainWindow(QtWidgets.QMainWindow):
             query += " " + queryContent.appendix_phrase
         logger.info(query.replace('\n', ' '))
 
-        self.querierThreads[queryContent.query_type].querylaunched.emit(tabIndex, query)
+        self.querierThreads[queryContent.query_type].querylaunched.emit(tabIndex, query, connIndex)
 
     @pyqtSlot(int, dict)
     def display_database_query_result(self, tabIndex, queryResult):
