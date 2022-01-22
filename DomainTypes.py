@@ -9,7 +9,7 @@ class QueryType(Enum):
     REST_HLC = 'REST_HLC'
     UNKNOWN = 'UNKNOWN'
 
-QueryContent = namedtuple('QueryContent', 'query_type, base_phrase, time_form, location_form, columns, modifiers, custom_conditions, appendix_phrase')
+QueryContent = namedtuple('QueryContent', 'query_type, static_connection_index, base_phrase, time_form, location_form, columns, modifiers, custom_conditions, appendix_phrase')
 
 QuerierThread = namedtuple('QuerierThread', 'querier, thread, querylaunched')
 

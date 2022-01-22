@@ -62,13 +62,14 @@ class ConfigurationManager:
                 queryItem = QTreeWidgetItem([queryData['query-name']])
                 bundleItem.addChild(queryItem)
                 self.queries[queryData['query-name']] = QueryContent(query_type = QueryType[queryData.get('query-type', 'UNKNOWN')], 
-                    base_phrase=queryData.get('base-phrase', ''), 
-                    time_form=queryData.get('time-form', None), 
-                    location_form=queryData.get('location-form', None),
-                    columns=queryData.get('columns', None), 
-                    modifiers=queryData.get('modifiers', None), 
+                    static_connection_index = queryData.get('static-connection-index', -1), 
+                    base_phrase = queryData.get('base-phrase', ''), 
+                    time_form = queryData.get('time-form', None), 
+                    location_form = queryData.get('location-form', None),
+                    columns = queryData.get('columns', None), 
+                    modifiers = queryData.get('modifiers', None), 
                     custom_conditions = queryData.get('custom-conditions', None),
-                    appendix_phrase=queryData.get('appendix-phrase', None))
+                    appendix_phrase = queryData.get('appendix-phrase', None))
         queryBundleTree.expandAll()
 
 
