@@ -20,34 +20,44 @@ class DatabaseQuerier(QtCore.QObject):
         super(DatabaseQuerier, self).__init__()
         self.name = dbName
         self.connectionParameter = connectionParameter
-        self.connected = False
+        self.dbs = {}
+        self.cursors = {}
+        self.connected = {1: False, 2: False}
 
-    def try_connect(self, addr):
+    def try_connect(self, addr, connIndex):
         try:
-            self.db = cx_Oracle.connect(self.connectionParameter.username, self.connectionParameter.password, addr+'/'+self.connectionParameter.sid)
-            self.cursor = self.db.cursor()
+            self.dbs[connIndex] = cx_Oracle.connect(self.connectionParameter.username, self.connectionParameter.password, addr+'/'+self.connectionParameter.sid)
+            self.cursors[connIndex] = self.dbs[connIndex].cursor()
 
-            self.connected = True
+            self.connected[connIndex] = True
             self.connectionstatusupdated.emit(self.name, True)
         except Exception:
-            self.cursor = self.db = None
-            self.connected = False
+            self.cursors[connIndex] = self.dbs[connIndex] = None
+            self.connected[connIndex] = False
             logger.exception("Connect attempt to Database %s at %s failed.", self.name, addr)
 
     @pyqtSlot()
     def establish_connection(self):
-        self.try_connect(self.connectionParameter.address)
-        if not self.connected and self.connectionParameter.address_alt:
-            self.try_connect(self.connectionParameter.address_alt)
+        self.try_connect(self.connectionParameter.address, 1)
+        if self.connectionParameter.address_alt:
+            self.try_connect(self.connectionParameter.address_alt, 2)
 
-    @pyqtSlot(int, str)
-    def launch_query(self, tabIndex, query):
+    @pyqtSlot(int, str, int)
+    def launch_query(self, tabIndex, query, connIndex):
+        if connIndex != -1:
+            logger.info('Query toward Alt DB:%s', query)
+            if not self.connected[connIndex]:
+                logger.exception('DB Query to DB of connection index %d, but the DB is not connected.', connIndex)
+                return
+        else:
+            logger.info('Query can be sent to any DB:%s', query)
+            connIndex = 1 if self.connected[1] else 2
         result = {}
         try:
-            self.cursor.execute(query)
-            result['columns'] = [col[0] for col in self.cursor.description]
+            self.cursors[connIndex].execute(query)
+            result['columns'] = [col[0] for col in self.cursors[connIndex].description]
             result['data'] = []
-            for row in self.cursor:
+            for row in self.cursors[connIndex]:
                 result['data'].append([QtGui.QStandardItem(cell if type(cell) == str else str(cell)) for cell in row])
             self.queryfinished.emit(tabIndex, result)
         except:
