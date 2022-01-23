@@ -851,3 +851,109 @@ query-bundles:
     - modifier-name: Message
       field: ele.message
     appendix-phrase: "ORDER BY ela.begin_timestamp DESC"
+
+- bundle-name: Database Status
+  bundle-content:
+    - query-name: (DB1) DataGuard Status
+      query-type: DB_HLC
+      static-connection-index: 1
+      base-phrase: >-
+        SELECT name, db_unique_name, open_mode, database_role, switchover_status, flashback_on, fs_failover_status, fs_failover_observer_present
+        FROM v$database
+    - query-name: (DB2) DataGuard Status
+      query-type: DB_HLC
+      static-connection-index: 2
+      base-phrase: >-
+        SELECT name, db_unique_name, open_mode, database_role, switchover_status, flashback_on, fs_failover_status, fs_failover_observer_present
+        FROM v$database
+    - query-name: Tablespace Usage
+      query-type: DB_HLC
+      base-phrase: >-
+        SELECT a.tablespace_name,
+            ROUND(a.autoext_bytes/(1024*1024),2) AS "TOTAL AUTOEXT (MB)",
+            ROUND(a.alloc_bytes/(1024*1024),2) AS "TOTAL ALLOC (MB)",
+            ROUND(nvl(b.tot_used,0)/(1024*1024),2) AS "USED (MB)",
+            ROUND((a.alloc_bytes-nvl(b.tot_used,0))/(1024*1024),2) AS "FREE (MB)",
+            ROUND((nvl(b.tot_used,0)/a.alloc_bytes)*100,2) AS "PCT USED",
+            a.cnt_datafiles AS "DATAFILES"
+        FROM ( SELECT tablespace_name,
+                  SUM(bytes) alloc_bytes,
+                  SUM(decode(autoextensible,'NO',bytes,'YES',maxbytes)) autoext_bytes,
+                  COUNT(1) cnt_datafiles
+              FROM dba_data_files
+              GROUP BY tablespace_name ) a,
+            ( SELECT tablespace_name, SUM(bytes) tot_used
+              FROM dba_segments
+              GROUP BY tablespace_name ) b
+        WHERE a.tablespace_name = b.tablespace_name (+)
+        AND   a.tablespace_name NOT IN (SELECT DISTINCT tablespace_name FROM dba_temp_files)
+        UNION
+        SELECT tablespace_name,
+            (tablespace_size)/(1024*1024),
+            (allocated_space)/(1024*1024),
+            (tablespace_size-free_space)/(1024*1024),
+            (free_space)/(1024*1024),
+            NULL,
+            0
+        FROM dba_temp_free_space
+      appendix-phrase: "ORDER BY 7 DESC, 6 DESC"
+    - query-name: Jobs Status
+      query-type: DB_HLC
+      base-phrase: >-
+        SELECT instance_name,
+            instance_state,
+            execution_count,
+            TO_CHAR(last_execution_start_date, 'yyyy-mm-dd hh24:mi:ss.ff3') AS last_start_time,
+            TO_CHAR(last_execution_end_date, 'yyyy-mm-dd hh24:mi:ss.ff3') AS last_end_time,
+            last_execution_state,
+            last_execution_info
+        FROM job_instance
+    - query-name: Locked Objects
+      query-type: DB_HLC
+      base-phrase: >-
+        SELECT o.object_name, o.object_type, o.owner, l.oracle_username, s.sid, s.serial#, s.status, s.osuser, s.machine
+        FROM v$locked_object l
+        LEFT JOIN v$session s ON l.session_id = s.sid
+        LEFT JOIN dba_objects o ON l.object_id = o.object_id
+    - query-name: (DB1) FRA Space Usage
+      query-type: DB_HLC
+      static-connection-index: 1
+      base-phrase: SELECT * FROM v$recovery_area_usage
+      custom-conditions:
+      - condition: percent_space_used > 0
+    - query-name: (DB2) FRA Space Usage
+      query-type: DB_HLC
+      static-connection-index: 2
+      base-phrase: SELECT * FROM v$recovery_area_usage
+      custom-conditions:
+      - condition: percent_space_used > 0
+    - query-name: (DB1) Sessions Monitor
+      query-type: DB_HLC
+      static-connection-index: 1
+      base-phrase: >-
+        SELECT sid, serial#, username,
+            to_char(logon_time,'YYYY-MM-DD HH24:MI:SS') AS logon_time,
+            round((last_call_et/3600),2) AS "LADST_CALL_ET (Hour)",
+            osuser, machine, program, module, client_info
+        FROM v$session
+      custom-conditions:
+      - condition: NOT (osuser IN ('WeblogicUser', 'kmg572') OR osuser LIKE '%OracleUser' OR osuser LIKE 'VM-SCADA%$')
+      modifiers:
+      - modifier-name: Program
+        field: program
+      appendix-phrase: "ORDER BY program, machine"
+    - query-name: (DB2) Sessions Monitor
+      query-type: DB_HLC
+      static-connection-index: 2
+      base-phrase: >-
+        SELECT sid, serial#, username,
+            to_char(logon_time,'YYYY-MM-DD HH24:MI:SS') AS logon_time,
+            round((last_call_et/3600),2) AS "LADST_CALL_ET (Hour)",
+            osuser, machine, program, module, client_info
+        FROM v$session
+      custom-conditions:
+      - condition: NOT (osuser IN ('WeblogicUser', 'kmg572') OR osuser LIKE '%OracleUser' OR osuser LIKE 'VM-SCADA%$')
+      modifiers:
+      - modifier-name: Program
+        field: program
+      appendix-phrase: "ORDER BY program, machine"
