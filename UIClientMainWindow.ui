@@ -77,7 +77,45 @@
            </widget>
           </item>
           <item>
-           <spacer name="buttonFrameSpacer">
+           <spacer name="topFrameLeftSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QLabel" name="logoPicLabel">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>132</width>
+              <height>21</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="pixmap">
+             <pixmap resource="resources/images.qrc">:/logoPic/sie-logo-petrol-rgb.svg</pixmap>
+            </property>
+            <property name="scaledContents">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="topFrameRightSpacer">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -654,7 +692,7 @@
              <string notr="true">QLabel{background-color:red;}</string>
             </property>
             <property name="text">
-             <string>UIS</string>
+             <string>REST</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
@@ -757,6 +795,8 @@
    </property>
   </action>
  </widget>
- <resources/>
+ <resources>
+  <include location="resources/images.qrc"/>
+ </resources>
  <connections/>
 </ui>
