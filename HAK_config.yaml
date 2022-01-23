@@ -1,0 +1,853 @@
+---
+database-rownum-limit: 10000
+elasticsearch-rownum-limit: 8000
+local-timezone-name: 'Asia/Shanghai'
+connection-parameters:
+- query-type: DB_HLC
+  address: '172.17.204.51'
+  address-alt: '172.17.204.52'
+  username: 'bagos'
+  password: 'BAGOS_DB_DEFAULT'
+  sid: 'bagos'
+- query-type: DB_TDS
+  address: '172.17.204.107'
+  username: 'diag'
+  password: 'diag'
+  sid: 'xe'
+- query-type: ES
+  address: '172.17.204.106:9200'
+- query-type: REST_HLC
+  address: '172.17.204.61:8001'
+  address-alt: '172.17.204.62:8002'
+tr-masterdata-filename: 'HAK_trmasterdata.json'
+cf-masterdata-filename: 'HAK_cfmasterdata.csv'
+scada-transition-matrix:
+- state-name: 'Not Connected'
+  state-bit: 15
+- state-name: 'Undefined'
+  state-bit: 18
+- state-name: 'E-Stop'
+  state-bit: 0
+- state-name: 'Jam'
+  state-bit: 22
+- state-name: 'S-Fault'
+  state-bit: 11
+- state-name: 'Fault'
+  state-bit: 2
+- state-name: 'Maintenance'
+  state-bit: 1
+- state-name: 'DegradedPLC'
+  state-bit: 19
+- state-name: 'Degraded'
+  state-bit: 17
+- state-name: 'Off'
+  state-bit: 5
+- state-name: 'Closed'
+  state-bit: 6
+- state-name: 'Dieback'
+  state-bit: 7
+- state-name: 'Running'
+  state-bit: 8
+  negative-bit: true
+- state-name: 'Power Save'
+  state-bit: 8
+query-bundles:
+- bundle-name: TU Traces
+  bundle-content:
+  - query-name: HLC Bag Tracking
+    query-type: DB_HLC
+    base-phrase: >-
+      SELECT
+          TO_CHAR(FROM_TZ(event_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS eventtime,
+          last_np AS last_np_ird,
+          NVL(tnp_lastnp_orig.id, tnp_lastnp_succ.id) AS last_np,
+          container_id AS tray_id,
+          origin_global_id AS origin_gid,
+          current_global_id AS gid,
+          bag_tag_id AS lpn,
+          NVL(tdp_curdest.id, crd_curdest.mapping_key) AS curr_dp,
+          bst.current_destination AS curr_dest,
+          bst.final_sort_destination AS final_dest,
+          bag_tag_state AS btag_state,
+          time_status,
+          transport_status,
+          tracking_status,
+          discharge_code AS context_info,
+          exception_to_standard_flow AS exception_to_std_flow,
+          bst.actual_exc_to_std_flow,
+          recirculation_count,
+          screening_max_result_state AS hbs_state,
+          CONCAT(carrier, flight_number) AS flight,
+          TO_CHAR(FROM_TZ(flight_std, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS std
+      FROM archive_bag_status   bst
+          LEFT JOIN plc_unit             plu_curdest ON plu_curdest.ird = bst.current_destination
+          LEFT JOIN destination_point    tdp_curdest ON plu_curdest.node_id = tdp_curdest.node_id
+          LEFT JOIN crd_mapping          crd_curdest ON crd_curdest.crd = bst.current_destination AND crd_curdest.role = 'defaultRole' and crd_curdest.mapping_type = 'DP'
+          LEFT JOIN plc_unit             plu_lastnp ON plu_lastnp.ird = bst.last_np
+          LEFT JOIN notification_point   tnp_lastnp_orig ON tnp_lastnp_orig.node_id_origin = plu_lastnp.node_id
+          LEFT JOIN notification_point   tnp_lastnp_succ ON tnp_lastnp_succ.node_id_successor = plu_lastnp.node_id
+    custom-conditions:
+    - condition: archlevel = 0
+    time-form: "FROM_TZ(event_time, 'UTC')"
+    location-form: "NVL(tnp_lastnp_orig.id, tnp_lastnp_succ.id)"
+    modifiers:
+    - modifier-name: TrayID
+      field: container_id
+    - modifier-name: GID
+      field: current_global_id
+    - modifier-name: LPN
+      field: bag_tag_id
+    - modifier-name: Current DP
+      field: NVL(tdp_curdest.id, crd_curdest.mapping_key)
+    - modifier-name: Transport Status
+      field: transport_status
+    - modifier-name: Flight Number
+      field: flight_number
+    appendix-phrase: "ORDER BY eventtime DESC"
+  - query-name: ES Transport Trace
+    query-type: ES
+    time-form: '@timestamp'
+    location-form: '_PREDEFINED'
+    columns:
+    - column-name: Time
+      field: '@timestamp'
+    - column-name: TS
+      field: TRANSACTION_STATUS
+    - column-name: ET
+      field: EXECUTION_TIME
+    - column-name: Telegram
+      field: TELEGRAM
+    - column-name: Node
+      field: PLC_ID
+    - column-name: Unit
+      field: UNIT_ID
+    - column-name: NP
+      field: NP_ID
+    - column-name: TM
+      field: NpTrackingModeEnum
+    - column-name: DP
+      field: DP_ID
+    - column-name: Tray ID
+      field: CONT_ID
+    - column-name: GID
+      field: GLOBAL_ID
+    - column-name: LPN
+      field: LPN
+    - column-name: TrState
+      field: TransportState
+    - column-name: TimeState
+      field: TimeState
+    - column-name: OperState
+      field: OperationalState
+    - column-name: BT
+      field: BagTagStateDerived
+    - column-name: LD
+      field: LOADING_STATE
+    - column-name: RT
+      field: ROUTING_TABLE_ID
+    - column-name: RI
+      field: ROUTING_INFO
+    - column-name: Flight
+      field: FLIGHT_NO
+    - column-name: SDD
+      field: SDD
+    - column-name: Payload
+      field: message_payload
+    modifiers:
+    - modifier-name: TELEGRAM
+      field: TELEGRAM.keyword
+    - modifier-name: NP
+      field: NP_ID.keyword
+    - modifier-name: TrayID
+      field: CONT_ID.keyword
+    - modifier-name: GID
+      field: GLOBAL_ID.keyword
+    - modifier-name: LPN
+      field: LPN.keyword
+    custom-conditions:
+    - condition: >-
+        { "bool": {"must": [{"exists":{"field":"EXECUTION_TIME"}},
+            {"query_string": {"fields": ["MODULE"], "query": "transportcontrol OR traycontrol OR traytransportcontrol OR storecontrol OR emptytraymanagement OR sortation" }}],
+          "must_not": [{ "match": {"METHOD.keyword": "setNumberOfRequiredEmptyTrays"}}] }}
+  - query-name: ES TIM Logs
+    query-type: ES
+    time-form: '@timestamp'
+    location-form: '_PREDEFINED'
+    columns:
+    - column-name: Time
+      field: '@timestamp'
+    - column-name: Telegram
+      field: TELEGRAM
+    - column-name: Node
+      field: PLC_ID
+    - column-name: Unit
+      field: UNIT_ID
+    - column-name: NP
+      field: NP_ID
+    - column-name: DP
+      field: DP_ID
+    - column-name: Tray ID
+      field: TRAY_ID
+    - column-name: GID
+      field: GLOBAL_ID
+    - column-name: LPN
+      field: LPN
+    - column-name: LD
+      field: LOADING_STATE
+    - column-name: RT
+      field: ROUTING_TABLE_ID
+    - column-name: RI
+      field: ROUTING_INFO
+    - column-name: Payload
+      field: message_payload
+    modifiers:
+    - modifier-name: TELEGRAM
+      field: TELEGRAM.keyword
+    - modifier-name: NP
+      field: NP_ID.keyword
+    - modifier-name: TrayID
+      field: TRAY_ID.keyword
+    - modifier-name: GID
+      field: GLOBAL_ID.keyword
+    - modifier-name: LPN
+      field: LPN.keyword
+    custom-conditions:
+    - condition: >-
+        { "bool": {"must": [{"match":{"logging_method.keyword":"debugTIMTelegram"}},
+          {"query_string":{"fields":["TELEGRAM.keyword"], "query":"3_DR OR 3_DS OR 3_RN OR 3_RD OR 3_CL OR 3_XO"}}] }}
+  - query-name: TDS TU Tracking
+    query-type: DB_TDS
+    base-phrase: >-
+      SELECT TO_CHAR(ptr.timestamp, 'YYYY-MM-DD HH24:MI:SS') AS EventTime,
+          ptr.PLCNODEID AS PLCID,
+          ptr.UNITID AS UnitID,
+          dcu.CFUNI_NAME AS IRD,
+          DECODE(ptr.FUNCTIONID, 30001, ptr.ADDINFO01, NULL) AS NP,
+          ptr.DestinationID AS DP,
+          CASE
+              WHEN ptr.FUNCTIONID IN (20328,20398,20441) AND ptr.ADDINFO01 = 2 THEN 'DestReq'
+              WHEN ptr.FUNCTIONID = 1547 THEN 'DestSet'
+              WHEN ptr.FUNCTIONID = 30001 THEN
+                  CASE WHEN ptr.ADDINFO02 = 2 OR NOT (SUBSTR(dcu.CFUNI_NAME, 13, 2) = 'HU' OR (ptr.ADDINFO01 BETWEEN 30014 AND 30017 OR ptr.ADDINFO01 = 30019)) THEN 'Np Reached'
+                  ELSE 'DestReached' END
+              WHEN ptr.FUNCTIONID = 30000 THEN 'DestReached'
+              WHEN ptr.FUNCTIONID = 498 THEN 'ChkLoad'
+              WHEN pfi.SHORTNAME = 'XO Delete TU' THEN 'TrackingLost'
+              ELSE NULL
+          END AS Telegram,
+          SUBSTR(ptr.TRAYID, 6, 5) AS TrayID,
+          ptr.GLOBALID AS GID,
+          SUBSTR(ptr.TransportGoodsID, 1, 10) AS LPN,
+          ptr.LoadingState AS LD,
+          ptr.ProblemDestination AS PD,
+          DECODE(ptr.FUNCTIONID, 498, adi02.DESCR, NULL) AS ChkLoadResult
+      FROM PTR_TRANSPORTUNITROUTING ptr
+          LEFT JOIN DIAG_CFUNI_UNIT dcu ON dcu.CFUNI_CFPLC_ID = ptr.PLCNODEID AND dcu.CFUNI_ID = ptr.UNITID
+          LEFT JOIN PFI_FUNCTIONIDS pfi ON pfi.ID = ptr.FUNCTIONID
+          LEFT JOIN ADI02_ADDINFO02 adi02 ON adi02.FUNCTIONID = ptr.FUNCTIONID AND adi02.VALUE = ptr.ADDINFO02
+    custom-conditions:
+    - condition: (ptr.FUNCTIONID IN (20328,20398,20441) AND ptr.ADDINFO01 = 2) OR ptr.FUNCTIONID IN (498, 1547, 30000, 30001) OR pfi.SHORTNAME = 'XO Delete TU'
+    time-form: "timestamp"
+    location-form: '_PREDEFINED'
+    modifiers:
+    - modifier-name: TrayID
+      field: SUBSTR(ptr.TRAYID, 6, 5)
+    - modifier-name: GID
+      field: GLOBALID
+    - modifier-name: LPN
+      field: SUBSTR(ptr.TransportGoodsID, 1, 10)
+    appendix-phrase: "ORDER BY timestamp DESC"
+
+- bundle-name: Bag Status
+  bundle-content:
+  - query-name: Current Bag Cache
+    query-type: REST_HLC
+    base-phrase: 'V1/bagcache'
+    modifiers:
+    - modifier-name: GID
+      field: '/gid'
+
+- bundle-name: HBS Data
+  bundle-content:
+  - query-name: Security Screening
+    query-type: DB_HLC
+    base-phrase: >-
+      SELECT
+          TO_CHAR(FROM_TZ(event_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS eventtime,
+          last_np AS last_np_ird,
+          tnp_lastnp_orig.id AS last_np,
+          hbs_map.location,
+          origin_global_id AS origin_gid,
+          current_global_id AS gid,
+          bag_tag_id AS lpn,
+          screening_max_result_state,
+          bag_tag_state AS btag_state,
+          time_status,
+          transport_status,
+          exception_to_standard_flow AS exception_to_std_flow,
+          CONCAT(carrier, flight_number) AS flight,
+          TO_CHAR(FROM_TZ(flight_std, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS std
+      FROM archive_bag_status   bst
+          LEFT JOIN plc_unit             plu_lastnp ON plu_lastnp.ird = bst.last_np
+          LEFT JOIN notification_point   tnp_lastnp_orig ON tnp_lastnp_orig.node_id_origin = plu_lastnp.node_id
+          LEFT JOIN hbs_np_mapping       hbs_map ON hbs_map.np_id = tnp_lastnp_orig.id AND hbs_map.location_type = 1
+    custom-conditions:
+    - condition: archlevel = 0
+    - condition: transport_status IN ('TRA_SCRN','TRA_SCRNn')
+    - condition: exception_to_standard_flow <> 'TIME_WARNING'
+    time-form: "FROM_TZ(event_time, 'UTC')"
+    location-form: "tnp_lastnp_orig.id"
+    modifiers:
+    - modifier-name: GID
+      field: current_global_id
+    - modifier-name: LPN
+      field: bag_tag_id
+    - modifier-name: Screening Max Result State
+      field: screening_max_result_state
+    - modifier-name: Flight Number
+      field: flight_number
+    appendix-phrase: "ORDER BY eventtime DESC"
+
+- bundle-name: Sortation Data
+  bundle-content:
+  - query-name: BSM Messages
+    query-type: DB_HLC
+    base-phrase: >-
+      SELECT id,
+          license_plate AS lpn,
+          carrier_designator || flight_number || suffix AS flight,
+          scheduled_date AS sdd,
+          bag_message_status,
+          passenger,
+          offload_airport,
+          onward_airport,
+          record_status,
+          TO_CHAR(FROM_TZ(last_modified_time_stamp, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS last_modified_time,
+          last_modified_by,
+          version
+      FROM bag_message
+    modifiers:
+    - modifier-name: LPN
+      field: license_plate
+    - modifier-name: Scheduled Date
+      field: scheduled_date
+    - modifier-name: Carrier Designator
+      field: carrier_designator
+    - modifier-name: Flight Number
+      field: flight_number
+    appendix-phrase: "ORDER BY scheduled_date DESC, last_modified_time_stamp DESC, license_plate"
+  - query-name: Flight Information
+    query-type: DB_HLC
+    base-phrase: >-
+      SELECT flt.id AS flt_id,
+        dep.id AS dep_id,
+        flt.carrier_designator || flt.flight_number || flt.suffix AS Flight,
+        flt.scheduled_date AS SDD,
+        flt.operational_status,
+        dep.flight_type,
+        dep.next_airport,
+        TO_CHAR(FROM_TZ(dep.scheduled_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS STD,
+        TO_CHAR(FROM_TZ(dep.estimated_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS ETD,
+        TO_CHAR(FROM_TZ(dep.actual_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss')    AS ATD,
+        airport_terminal AS Terminal,
+        aircraft_stand AS Stand,
+        flt.record_status AS flt_record_status,
+        TO_CHAR(FROM_TZ(flt.last_modified_time_stamp, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS flt_last_modified_time,
+        flt.last_modified_by AS flt_last_modified_by
+      FROM FLIGHT flt
+          LEFT JOIN DEPARTURE dep ON dep.flight_id = flt.id
+    modifiers:
+    - modifier-name: Scheduled Date
+      field: flt.scheduled_date
+    - modifier-name: Carrier Designator
+      field: flt.carrier_designator
+    - modifier-name: Flight Number
+      field: flt.flight_number
+    appendix-phrase: "ORDER BY flt.scheduled_date DESC, flt.carrier_designator, flt.flight_number"
+  - query-name: Flight Sortation Allocation
+    query-type: DB_HLC
+    base-phrase: >-
+      SELECT flt.id AS flt_id,
+        dep.id AS dep_id,
+        dsr.id AS dsr_id,
+        flt.carrier_designator || flt.flight_number || flt.suffix AS Flight,
+        flt.scheduled_date AS SDD,
+        dsr.sort_destination_point AS Dest_DP,
+        crd.crd AS Dest_CRD,
+        TO_CHAR(FROM_TZ(dsr.open_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS OpenTime,
+        TO_CHAR(FROM_TZ(dsr.close_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS CloseTime,
+        flt.operational_status,
+        dep.flight_type,
+        dep.next_airport,
+        TO_CHAR(FROM_TZ(dep.scheduled_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS STD,
+        TO_CHAR(FROM_TZ(dep.estimated_time, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS ETD,
+        flt.record_status AS flt_rec_status,
+        dep.record_status AS dep_rec_status,
+        dsr.record_status AS dsr_rec_status,
+        TO_CHAR(FROM_TZ(dsr.last_modified_time_stamp, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS dsr_last_modified_time
+      FROM DEPARTURE_SORTATION_RULE dsr
+          LEFT JOIN CRD_MAPPING crd ON crd.role = 'SortAllocation' AND crd.mapping_key = dsr.sort_destination_point
+          LEFT JOIN DEPARTURE dep ON dep.id = dsr.departure_id
+          LEFT JOIN FLIGHT flt ON flt.id = dep.flight_id
+    appendix-phrase: "ORDER BY crd.crd, dsr.close_time"
+    modifiers:
+    - modifier-name: Scheduled Date
+      field: flt.scheduled_date
+    - modifier-name: Carrier Designator
+      field: flt.carrier_designator
+    - modifier-name: Flight Number
+      field: flt.flight_number
+  - query-name: Flight Onward Destinations
+    query-type: DB_HLC
+    base-phrase: >-
+      SELECT flt.id AS flt_id,
+        dep.id      AS dep_id,
+        onw.id      AS onw_id,
+        flt.scheduled_date,
+        flt.carrier_designator || flt.flight_number || flt.suffix AS Flight,
+        flt.operational_status,
+        dep.next_airport AS dep_next_airport,
+        onw.sequence AS onw_sequence,
+        onw.last_onward_airport,
+        onw.record_status AS onw_record_status,
+        TO_CHAR(FROM_TZ(onw.last_modified_time_stamp, 'UTC') AT TIME ZONE '+08:00', 'yyyy-mm-dd hh24:mi:ss') AS onw_last_modified_time,
+        onw.version AS onw_version
+      FROM ONWARD_DESTINATION onw
+      LEFT JOIN DEPARTURE dep ON onw.departure_id = dep.id
+      LEFT JOIN FLIGHT flt ON dep.flight_id = flt.id
+    appendix-phrase: "ORDER BY flt.scheduled_date DESC, flt.carrier_designator, flt.flight_number, onw.sequence"
+    modifiers:
+    - modifier-name: Scheduled Date
+      field: flt.scheduled_date
+    - modifier-name: Carrier Designator
+      field: flt.carrier_designator
+    - modifier-name: Flight Number
+      field: flt.flight_number
+
+- bundle-name: Early Bag Store
+  bundle-content:
+    - query-name: Tray Overview
+      query-type: DB_HLC
+      base-phrase: >-
+        select carr.carr AS trayid
+            , carr.target
+            , carr.loar AS Logical_Area
+            , calo.locn AS Location
+            , CASE WHEN carr.arvl_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(carr.arvl_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Arrival_Time
+            , carr.globalid AS GID
+            , tidc.bagtag AS LPN
+            , tidc.flgtno AS Flight
+            , CASE WHEN tidc.flgtot <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.flgtot, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Open_Time
+            , CASE WHEN tidc.flgtedt <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.flgtedt, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS ETD
+            , tidc.mupdest AS MuDest
+            , CASE WHEN carr.ident_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(carr.ident_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Identi_Time
+            , carr.ident_locn AS Identi_Location
+            , CASE WHEN carr.move_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(carr.move_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS LastMove_Time
+            , CASE WHEN tidc.updt_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.updt_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Tidc_Update_Time
+        FROM FD_KMG572_LIVE.CARR carr
+        LEFT JOIN FD_KMG572_LIVE.CALO calo ON calo.carr = carr.carr
+        LEFT JOIN FD_KMG572_LIVE.TIDC tidc ON tidc.trayno = carr.carr
+      modifiers:
+      - modifier-name: Location
+        field: calo.locn
+      - modifier-name: TrayID
+        field: carr.carr
+      - modifier-name: GID
+        field: carr.globalid
+      - modifier-name: LPN
+        field: tidc.bagtag
+      - modifier-name: Flight
+        field: tidc.flgtno
+    - query-name: TIDC Data Exclusive
+      query-type: DB_HLC
+      base-phrase: >-
+        select tidc.trayno AS trayid
+            , tidc.locn AS Location
+            , tidc.globalid AS gid
+            , tidc.bagtag AS lpn
+            , tidc.flgtno AS Flight
+            , CASE WHEN tidc.flgtot <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.flgtot, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Open_Time
+            , CASE WHEN tidc.flgtedt <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.flgtedt, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS ETD
+            , tidc.mupdest AS MuDest
+            , CASE WHEN tidc.updt_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.updt_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Tidc_Update_Time
+        from FD_KMG572_LIVE.TIDC
+      modifiers:
+      - modifier-name: Location
+        field: tidc.locn
+      - modifier-name: TrayID
+        field: tidc.trayno
+      - modifier-name: GID
+        field: tidc.globalid
+      - modifier-name: LPN
+        field: tidc.bagtag
+      - modifier-name: Flight
+        field: tidc.flgtno
+      custom-conditions:
+      - condition: 'trayno NOT IN (SELECT carr FROM FD_KMG572_LIVE.CARR)'
+      appendix-phrase: 'ORDER BY tidc.updt_dttm DESC'
+    - query-name: Store Control Items
+      query-type: DB_HLC
+      base-phrase: >-
+        WITH sc_item AS (
+            SELECT ste.name AS Store_Element
+                , rki.tray_no AS TrayId
+                , sti.global_id AS GID
+                , sti.license_plate AS LPN
+                , sti.bag_storage_status AS Storage_Status
+                , sti.destination_point_id AS dpid
+                , rki.store_bag_location AS Store_Location
+                , CONCAT(sti.carrier_code, sti.flight_number) AS Flight
+                , sti.flight_scheduled_date AS SDD
+                , NULL AS Tray_Maintenance_State
+                , TO_CHAR(FROM_TZ(sti.created_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS created_time
+                , TO_CHAR(FROM_TZ(sti.delivery_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS delivery_time
+                , TO_CHAR(FROM_TZ(sti.expected_release_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS expected_release_time
+                , TO_CHAR(FROM_TZ(sti.release_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS release_time
+                , TO_CHAR(FROM_TZ(sti.release_confirmation_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS release_confirmation_time
+                , TO_CHAR(FROM_TZ(sti.last_modified_time_stamp, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS last_modified_time
+            FROM store_item sti
+            LEFT JOIN rack_item rki ON rki.store_item_id = sti.id
+            LEFT JOIN store_element ste ON ste.id = sti.store_element_id
+            UNION ALL
+            SELECT ste.name AS Store_Element
+                , sci.container_id AS TrayId
+                , NULL AS GID, NULL AS LPN
+                , sci.container_storage_status AS Storage_Status
+                , sci.destination_point_id AS dpid
+                , NULL AS Store_Location, NULL AS Flight, NULL AS SDD
+                , sci.container_maintenance_state AS Tray_Maintenance_State
+                , NULL AS created_time, NULL AS delivery_time, NULL AS expected_release_time, NULL AS release_time, NULL AS release_confirmation_time
+                , TO_CHAR(FROM_TZ(sci.last_modified_time_stamp, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS last_modified_time
+            FROM store_container_item sci
+            LEFT JOIN store_element ste ON ste.id = sci.store_element_id
+        )
+        SELECT *
+        FROM sc_item
+      modifiers:
+      - modifier-name: Storage Status
+        field: Storage_Status
+      - modifier-name: Location
+        field: Store_Location
+      - modifier-name: TrayID
+        field: TrayID
+      - modifier-name: GID
+        field: GID
+      - modifier-name: LPN
+        field: LPN
+      - modifier-name: Scheduled Date
+        field: SDD
+      - modifier-name: Flight
+        field: Flight
+    - query-name: RQSB Retrieval Request
+      query-type: DB_HLC
+      base-phrase: >-
+        SELECT
+            rqsbid AS request_id,
+            rqsb.trayno AS tray_id,
+            tidc.globalid AS GID,
+            tidc.bagtag AS LPN,
+            tidc.flgtno AS flight,
+            exit_locn AS exit,
+            altexit_locn AS alt_exit,
+            CASE
+                WHEN rqsbstat = 1 THEN '1 - Created'
+                WHEN rqsbstat = 2 THEN '2 - Started'
+                WHEN rqsbstat = 3 THEN '3 - Activated'
+                WHEN rqsbstat = 4 THEN '4 - Cancelled'
+                WHEN rqsbstat = 5 THEN '5 - Finished'
+            END AS status,
+            rqsbtype AS type,
+            ordrprio AS priority,
+            TO_CHAR(FROM_TZ(TO_TIMESTAMP(rqsb.updt_dttm, 'YYYYMMDDHH24MISS'), 'UTC') AT TIME ZONE '+08:00', 'YYYY-MM-DD HH24:MI:SS') AS eventtime
+        FROM FD_KMG572_LIVE.RQSB
+        LEFT JOIN FD_KMG572_LIVE.TIDC on TIDC.trayno = RQSB.trayno
+      time-form: "FROM_TZ(TO_TIMESTAMP(rqsb.updt_dttm, 'YYYYMMDDHH24MISS'), 'UTC')"
+      modifiers:
+      - modifier-name: TrayID
+        field: rqsb.trayno
+      - modifier-name: Exit
+        field: exit_locn
+      - modifier-name: Status Number
+        field: rqsbstat
+      appendix-phrase: 'ORDER BY rqsb.updt_dttm DESC'
+
+- bundle-name: Empty Tray Store
+  bundle-content:
+    - query-name: ETS Filling Level
+      query-type: ES
+      time-form: '@timestamp'
+      columns:
+      - column-name: Time
+        field: '@timestamp'
+      - column-name: ETS Element ID
+        field: EMPTY_TRAY_STORE_ELEMENT_ID
+      - column-name: Payload
+        field: message_payload
+      modifiers:
+      - modifier-name: ETS Element ID
+        field: EMPTY_TRAY_STORE_ELEMENT_ID
+      custom-conditions:
+      - condition: '{"match":{"logging_method.keyword":"ETMStoreStateBean.getCurrentState"}}'
+
+- bundle-name: HLC Master Data
+  bundle-content:
+    - query-name: Notification Points
+      query-type: DB_HLC
+      base-phrase: >-
+        SELECT tnp.id,
+          CASE WHEN tnp.id > 20000 THEN plu_succ.ird ELSE plu_orig.ird END AS ird,
+          CASE WHEN tnp.id > 20000 THEN plu_succ.unit_id ELSE plu_orig.unit_id END AS unit_id,
+          tnp.node_id_origin AS node_id_orig, plu_orig.ird AS ird_orig, plu_orig.unit_id AS unit_id_orig,
+          tnp.node_id_successor AS node_id_succ, plu_succ.ird AS ird_succ, plu_succ.unit_id AS unit_id_succ,
+          tracking_mode, is_notifying, response_plc_id
+        FROM notification_point tnp
+        LEFT JOIN plc_unit plu_orig ON tnp.node_id_origin = plu_orig.node_id
+        LEFT JOIN plc_unit plu_succ ON tnp.node_id_successor = plu_succ.node_id
+      modifiers:
+      - modifier-name: NP ID
+        field: tnp.id
+      - modifier-name: IRD Orig
+        field: plu_orig.ird
+      - modifier-name: IRD Succ
+        field: plu_succ.ird
+      appendix-phrase: "ORDER BY tnp.id"
+    - query-name: Destination Points
+      query-type: DB_HLC
+      base-phrase: >-
+        SELECT tdp.id, crd.crd, plu.ird,
+            tdp.dp_id_group, dpr.np_id AS map_np
+        FROM destination_point tdp
+            LEFT JOIN plc_unit plu on plu.node_id = tdp.node_id
+            LEFT JOIN destination_reached dpr on dpr.dp_id = tdp.id
+            LEFT JOIN CRD_MAPPING crd ON crd.role = 'SortAllocation' AND crd.mapping_key = tdp.id
+      modifiers:
+      - modifier-name: DP ID
+        field: tdp.id
+      - modifier-name: CRD
+        field: crd.crd
+      - modifier-name: IRD
+        field: plu.ird
+      appendix-phrase: "ORDER BY tdp.id"
+
+- bundle-name: TDS Diagnostic
+  bundle-content:
+    - query-name: PTR Routing Diagnostic
+      query-type: DB_TDS
+      base-phrase: >-
+        SELECT *
+        FROM ptrbbt
+      time-form: "eventtime"
+      modifiers:
+      - modifier-name: GID
+        field: GLOBAL_ID
+      - modifier-name: LPN
+        field: BAG_ID
+      - modifier-name: TrayID
+        field: TRAY_ID
+      - modifier-name: FunctionID
+        field: FUNCTIONID
+      appendix-phrase: "ORDER BY eventtime DESC"
+    - query-name: PCD Common Diagnostic
+      query-type: DB_TDS
+      base-phrase: >-
+        SELECT *
+        FROM pcdbbt
+      time-form: "eventtime"
+      modifiers:
+      - modifier-name: FuncName
+        field: f_name
+      - modifier-name: Event1
+        field: event_1
+      appendix-phrase: "ORDER BY eventtime DESC"
+
+- bundle-name: TIM Telegrams
+  bundle-content:
+    - query-name: Scada Telegrams
+      query-type: ES
+      time-form: '@timestamp'
+      columns:
+      - column-name: Time
+        field: '@timestamp'
+      - column-name: Connection Name
+        field: connection_name
+      - column-name: Telegram
+        field: TELEGRAM
+      - column-name: Unit ID
+        field: unitId
+      - column-name: Unit State
+        field: unitState
+      - column-name: EM ID
+        field: emId
+      - column-name: EM State
+        field: moduleState
+      - column-name: Command
+        field: command
+      - column-name: Signal ID
+        field: signalId
+      - column-name: Signal State
+        field: signalState
+      modifiers:
+      - modifier-name: Telegram
+        field: 'TELEGRAM'
+      - modifier-name: PLC
+        field: '^connection_name'
+      custom-conditions:
+      - condition: '{"match":{"logging_method.keyword":"debugTIMTelegram"}}'
+      - condition: '{"query_string":{"fields":["TELEGRAM.keyword"], "query":"2_US OR 2_ES OR 2_SS OR 7_OC"}}'
+    - query-name: Routing Table History
+      query-type: ES
+      time-form: '@timestamp'
+      columns:
+      - column-name: Time
+        field: '@timestamp'
+      - column-name: Connection Name
+        field: connection_name
+      - column-name: Seq
+        field: sequence
+      - column-name: Logging Method
+        field: logging_method
+      - column-name: Payload
+        field: message_payload
+      modifiers:
+      - modifier-name: PLC
+        field: '^connection_name'
+      custom-conditions:
+      - condition: '{"match":{"logs_type.keyword":"plc"}}'
+      - condition: >-
+          { "bool": {"minimum_should_match": 1, "should": [
+              { "bool": { "must": [{"match":{"logging_class.keyword":"TelegramTraceInfo"}}, {"match":{"TELEGRAM.keyword":"3_TX"}}] }},
+              { "bool": { "must": [{"match":{"logging_method.keyword":"traceOriginalTelegramInfo"}}, {"match_phrase":{"message_payload":"3_AT_S3_AT_D\\{3_TX"}}] }}] }}
+    - query-name: Transport Tim Connections
+      query-type: ES
+      time-form: '@timestamp'
+      columns:
+      - column-name: Time
+        field: '@timestamp'
+      - column-name: Log Level
+        field: log_level
+      - column-name: Connection Name
+        field: connection_name
+      - column-name: Telegram
+        field: TELEGRAM
+      - column-name: Logging Class
+        field: logging_class
+      - column-name: Logging Method
+        field: logging_method
+      - column-name: Payload
+        field: message_payload
+      modifiers:
+      - modifier-name: Telegram
+        field: 'TELEGRAM'
+      - modifier-name: PLC
+        field: '^connection_name'
+      custom-conditions:
+      - condition: >-
+          {"bool": {"minimum_should_match": 1, "should": [
+            { "bool": { "must": [
+              {"match":{"logging_method.keyword":"debugTIMTelegram"}},
+              {"match":{"message_payload":"000525"}},
+              {"query_string":{"fields":["TELEGRAM.keyword"], "query":"1_CE OR 1_AL OR 1_AR OR 1_RB OR 1_RE OR 3_TR OR 3_TB OR 3_TE"}}] }},
+            { "bool": { "must": [
+              {"match":{"logs_type.keyword":"plc"}},
+              {"match_phrase":{"log.file.path":"plcinterface"}},
+              {"query_string":{"fields":["message"],"query":"error OR warn"}} ]}} ]}}
+    - query-name: Scada Tim Connections
+      query-type: ES
+      time-form: '@timestamp'
+      columns:
+      - column-name: Time
+        field: '@timestamp'
+      - column-name: Log Level
+        field: log_level
+      - column-name: Connection Name
+        field: connection_name
+      - column-name: Telegram
+        field: TELEGRAM
+      - column-name: Logging Class
+        field: logging_class
+      - column-name: Logging Method
+        field: logging_method
+      - column-name: Payload
+        field: message_payload
+      modifiers:
+      - modifier-name: Telegram
+        field: 'TELEGRAM'
+      - modifier-name: PLC
+        field: '^connection_name'
+      custom-conditions:
+      - condition: >-
+          {"bool": {"minimum_should_match": 1, "should": [
+            { "bool": { "must": [
+              {"match":{"logging_method.keyword":"debugTIMTelegram"}},
+              {"match":{"message_payload":"000515"}},
+              {"query_string":{"fields":["TELEGRAM.keyword"], "query":"1_CE OR 1_AL OR 1_AR OR 1_RB OR 1_RE OR 2_RS OR 2_MB OR 2_ME"}}] }},
+            { "bool": { "must": [
+              {"match":{"logs_type.keyword":"plc"}},
+              {"match_phrase":{"log.file.path":"TIMConnections"}},
+              {"query_string":{"fields":["message"],"query":"error OR warn"}} ]}} ]}}
+
+- bundle-name: REST Routing Information
+  bundle-content:
+  - query-name: Get Standard Routing
+    query-type: REST_HLC
+    base-phrase: 'V1/routing/standard'
+    modifiers:
+    - modifier-name: From NP
+      field: npId
+    - modifier-name: To DP
+      field: dpId
+  - query-name: Get Current Routing
+    query-type: REST_HLC
+    base-phrase: 'V1/routing/current'
+    modifiers:
+    - modifier-name: From NP
+      field: npId
+    - modifier-name: To DP
+      field: dpId
+  - query-name: Standard Routing Table
+    query-type: REST_HLC
+    base-phrase: 'V1/routing/standard/tables'
+    modifiers:
+    - modifier-name: PLC ID
+      field: '/plcId'
+    - modifier-name: UnitID
+      field: '/unitId'
+  - query-name: Current Routing Table
+    query-type: REST_HLC
+    base-phrase: 'V1/routing/current/tables'
+    modifiers:
+    - modifier-name: PLC ID
+      field: '/plcId'
+    - modifier-name: UnitID
+      field: '/unitId'
+
+- bundle-name: Event Logs
+  bundle-content:
+  - query-name: Alarm Messages
+    query-type: DB_HLC
+    base-phrase: >-
+      SELECT
+          TO_CHAR(FROM_TZ(ela.begin_timestamp, 'UTC') AT TIME ZONE '+08:00', 'YYYY-MM-DD HH24:MI:SS.FF3') AS begin_time,
+          TO_CHAR(FROM_TZ(ela.end_timestamp, 'UTC') AT TIME ZONE '+08:00', 'YYYY-MM-DD HH24:MI:SS.FF3') AS end_time,
+          ele.event_type,
+          ela.state,
+          ela.component_name AS component,
+          ela.primary_reference,
+          ele.event_id,
+          ele.message,
+          ela.auxiliary_reference
+      FROM event_log_alarm_entry ela
+          LEFT JOIN event_log_entry ele ON ela.seq_no = ele.seq_no
+    custom-conditions:
+    - condition: ele.locale = 'en'
+    time-form: "FROM_TZ(ele.client_date, 'UTC')"
+    modifiers:
+    - modifier-name: Component
+      field: ela.component_name
+    - modifier-name: State
+      field: ela.state
+    - modifier-name: Primary Reference
+      field: ela.primary_reference
+    - modifier-name: Message
+      field: ele.message
+    appendix-phrase: "ORDER BY ela.begin_timestamp DESC"
