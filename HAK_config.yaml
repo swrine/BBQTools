@@ -937,7 +937,7 @@ query-bundles:
             osuser, machine, program, module, client_info
         FROM v$session
       custom-conditions:
-      - condition: NOT (osuser IN ('WeblogicUser', 'kmg572') OR osuser LIKE '%OracleUser' OR osuser LIKE 'VM-SCADA%$')
+      - condition: NOT (osuser IN ('WeblogicUser', 'hak571') OR osuser LIKE '%OracleUser' OR osuser LIKE 'VM-SCADA%$')
       modifiers:
       - modifier-name: Program
         field: program
@@ -952,7 +952,7 @@ query-bundles:
             osuser, machine, program, module, client_info
         FROM v$session
       custom-conditions:
-      - condition: NOT (osuser IN ('WeblogicUser', 'kmg572') OR osuser LIKE '%OracleUser' OR osuser LIKE 'VM-SCADA%$')
+      - condition: NOT (osuser IN ('WeblogicUser', 'hak571') OR osuser LIKE '%OracleUser' OR osuser LIKE 'VM-SCADA%$')
       modifiers:
       - modifier-name: Program
         field: program
