@@ -440,9 +440,9 @@ query-bundles:
             , carr.ident_locn AS Identi_Location
             , CASE WHEN carr.move_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(carr.move_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS LastMove_Time
             , CASE WHEN tidc.updt_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.updt_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Tidc_Update_Time
-        FROM FD_KMG572_LIVE.CARR carr
-        LEFT JOIN FD_KMG572_LIVE.CALO calo ON calo.carr = carr.carr
-        LEFT JOIN FD_KMG572_LIVE.TIDC tidc ON tidc.trayno = carr.carr
+        FROM FD_HAK571_LIVE.CARR carr
+        LEFT JOIN FD_HAK571_LIVE.CALO calo ON calo.carr = carr.carr
+        LEFT JOIN FD_HAK571_LIVE.TIDC tidc ON tidc.trayno = carr.carr
       modifiers:
       - modifier-name: Location
         field: calo.locn
@@ -466,7 +466,7 @@ query-bundles:
             , CASE WHEN tidc.flgtedt <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.flgtedt, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS ETD
             , tidc.mupdest AS MuDest
             , CASE WHEN tidc.updt_dttm <> ' ' THEN TO_CHAR(TO_TIMESTAMP(tidc.updt_dttm, 'YYYYMMDDHH24MISS'), 'yyyy-mm-dd hh24:mi:ss') ELSE NULL END AS Tidc_Update_Time
-        from FD_KMG572_LIVE.TIDC
+        from FD_HAK571_LIVE.TIDC
       modifiers:
       - modifier-name: Location
         field: tidc.locn
@@ -479,7 +479,7 @@ query-bundles:
       - modifier-name: Flight
         field: tidc.flgtno
       custom-conditions:
-      - condition: 'trayno NOT IN (SELECT carr FROM FD_KMG572_LIVE.CARR)'
+      - condition: 'trayno NOT IN (SELECT carr FROM FD_HAK571_LIVE.CARR)'
       appendix-phrase: 'ORDER BY tidc.updt_dttm DESC'
     - query-name: Store Control Items
       query-type: DB_HLC
@@ -555,8 +555,8 @@ query-bundles:
             rqsbtype AS type,
             ordrprio AS priority,
             TO_CHAR(FROM_TZ(TO_TIMESTAMP(rqsb.updt_dttm, 'YYYYMMDDHH24MISS'), 'UTC') AT TIME ZONE '+08:00', 'YYYY-MM-DD HH24:MI:SS') AS eventtime
-        FROM FD_KMG572_LIVE.RQSB
-        LEFT JOIN FD_KMG572_LIVE.TIDC on TIDC.trayno = RQSB.trayno
+        FROM FD_HAK571_LIVE.RQSB
+        LEFT JOIN FD_HAK571_LIVE.TIDC on TIDC.trayno = RQSB.trayno
       time-form: "FROM_TZ(TO_TIMESTAMP(rqsb.updt_dttm, 'YYYYMMDDHH24MISS'), 'UTC')"
       modifiers:
       - modifier-name: TrayID
