@@ -276,25 +276,21 @@ query-bundles:
           TO_CHAR(FROM_TZ(event_time, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS eventtime,
           last_np AS last_np_ird,
           tnp_lastnp_orig.id AS last_np,
-          hbs_map.location,
+          screening_device AS scrn_device,
           origin_global_id AS origin_gid,
           current_global_id AS gid,
           bag_tag_id AS lpn,
-          screening_max_result_state,
-          bag_tag_state AS btag_state,
+          screening_max_result_state AS scrn_max_result,
           time_status,
-          transport_status,
-          exception_to_standard_flow AS exception_to_std_flow,
+          tracking_status,
           CONCAT(carrier, flight_number) AS flight,
           TO_CHAR(FROM_TZ(flight_std, 'UTC') AT TIME ZONE '+08:00', 'yyyymmdd hh24:mi:ss') AS std
       FROM archive_bag_status   bst
           LEFT JOIN plc_unit             plu_lastnp ON plu_lastnp.ird = bst.last_np
           LEFT JOIN notification_point   tnp_lastnp_orig ON tnp_lastnp_orig.node_id_origin = plu_lastnp.node_id
-          LEFT JOIN hbs_np_mapping       hbs_map ON hbs_map.np_id = tnp_lastnp_orig.id AND hbs_map.location_type = 1
     custom-conditions:
     - condition: archlevel = 0
-    - condition: transport_status IN ('TRA_SCRN','TRA_SCRNn')
-    - condition: exception_to_standard_flow <> 'TIME_WARNING'
+    - condition: discharge_code = 'HBS_RESULT_UPDATED'
     time-form: "FROM_TZ(event_time, 'UTC')"
     location-form: "tnp_lastnp_orig.id"
     modifiers:
