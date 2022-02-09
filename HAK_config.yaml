@@ -869,8 +869,10 @@ query-bundles:
             ROUND(a.autoext_bytes/(1024*1024),2) AS "TOTAL AUTOEXT (MB)",
             ROUND(a.alloc_bytes/(1024*1024),2) AS "TOTAL ALLOC (MB)",
             ROUND(nvl(b.tot_used,0)/(1024*1024),2) AS "USED (MB)",
-            ROUND((a.alloc_bytes-nvl(b.tot_used,0))/(1024*1024),2) AS "FREE (MB)",
-            ROUND((nvl(b.tot_used,0)/a.alloc_bytes)*100,2) AS "PCT USED",
+            ROUND((a.autoext_bytes-nvl(b.tot_used,0))/(1024*1024),2) AS "FREE TOTAL (MB)",
+            ROUND((a.alloc_bytes-nvl(b.tot_used,0))/(1024*1024),2) AS "FREE ALLOC (MB)",
+            ROUND((nvl(b.tot_used,0)/a.autoext_bytes)*100,2) AS "PCT USED TOTAL",
+            ROUND((nvl(b.tot_used,0)/a.alloc_bytes)*100,2) AS "PCT USED ALLOC",
             a.cnt_datafiles AS "DATAFILES"
         FROM ( SELECT tablespace_name,
                   SUM(bytes) alloc_bytes,
@@ -890,9 +892,11 @@ query-bundles:
             (tablespace_size-free_space)/(1024*1024),
             (free_space)/(1024*1024),
             NULL,
+            NULL,
+            NULL,
             0
         FROM dba_temp_free_space
-      appendix-phrase: "ORDER BY 7 DESC, 6 DESC"
+      appendix-phrase: ORDER BY DATAFILES DESC, "PCT USED TOTAL" DESC
     - query-name: Jobs Status
       query-type: DB_HLC
       base-phrase: >-
