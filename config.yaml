@@ -103,6 +103,8 @@ query-bundles:
       field: transport_status
     - modifier-name: Flight Number
       field: flight_number
+    - modifier-name: Exception To Flow
+      field: exception_to_standard_flow
     appendix-phrase: "ORDER BY eventtime DESC"
   - query-name: ES Transport Trace
     query-type: ES
