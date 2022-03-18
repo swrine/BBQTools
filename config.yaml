@@ -20,7 +20,7 @@ connection-parameters:
   address: '10.50.21.61:8001'
   address-alt: '10.50.21.62:8002'
 tr-masterdata-filename: 'KMG_trmasterdata.json'
-cf-masterdata-filename: 'cfmasterdata.csv'
+cf-masterdata-filename: 'KMG_cfmasterdata.csv'
 scada-transition-matrix:
 - state-name: 'Not Connected'
   state-bit: 15
