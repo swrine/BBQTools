@@ -10,10 +10,11 @@ connection-parameters:
   password: 'BAGOS_DB_DEFAULT'
   sid: 'bagos'
 - query-type: DB_TDS
-  address: '10.50.21.107'
+  address: '192.168.5.128'
   username: 'diag'
-  password: 'diag'
-  sid: 'xe'
+  password: 'TDS_DB_DEFAULT'
+  databasename: 'postgres'
+  port: '1522'
 - query-type: ES
   address: '10.50.21.106:9200'
 - query-type: REST_HLC
@@ -643,7 +644,7 @@ query-bundles:
       - modifier-name: TrayID
         field: TRAY_ID
       - modifier-name: FunctionID
-        field: FUNCTIONID
+        field: FID
       appendix-phrase: "ORDER BY eventtime DESC"
     - query-name: PCD Common Diagnostic
       query-type: DB_TDS

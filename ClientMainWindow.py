@@ -7,7 +7,7 @@ from PyQt5.QtCore import pyqtSlot
 from UIClientMainWindow import Ui_clientMainWindow
 from MainQueryDialogue import MainQueryDialogue
 
-from Querier import DatabaseQuerier, ElasticSearchQuerier, RestApiQuerier
+from Querier import OracleQuerier, ElasticSearchQuerier, RestApiQuerier, PostgreSqlQuerier
 from DomainTypes import QueryType, QuerierThread
 from ConfigurationManager import ConfigurationManager
 from ContextTraceHighlighter import ContextTraceHighlighter
@@ -81,14 +81,14 @@ class ClientMainWindow(QtWidgets.QMainWindow):
         self.querierThreads = {}
         if QueryType.DB_HLC in cfg.connectionParameters:
             self._setup_querier(QueryType.DB_HLC,
-                DatabaseQuerier(QueryType.DB_HLC, cfg.connectionParameters[QueryType.DB_HLC]),
+                OracleQuerier(QueryType.DB_HLC, cfg.connectionParameters[QueryType.DB_HLC]),
                 self.hlcDatabaseQueryLaunched,
                 self.display_database_query_result)
         else:
             self._update_connection_status_label(QueryType.DB_HLC, 'gray')
         if QueryType.DB_TDS in cfg.connectionParameters:
             self._setup_querier(QueryType.DB_TDS,
-                DatabaseQuerier(QueryType.DB_TDS, cfg.connectionParameters[QueryType.DB_TDS]),
+                PostgreSqlQuerier(QueryType.DB_TDS, cfg.connectionParameters[QueryType.DB_TDS]),
                 self.tdsDatabaseQueryLaunched,
                 self.display_database_query_result)
         else:
@@ -203,13 +203,16 @@ class ClientMainWindow(QtWidgets.QMainWindow):
         queryDialogue.setup_result_table()
 
 
-    def launch_database_query(self, tabIndex):
+    def launch_database_query(self, tabIndex, dbFlavor):
         queryDialogue = self.ui.queryTabs.widget(tabIndex)
         queryContent = cfg.queries[queryDialogue.queryName]
         connIndex = queryContent.static_connection_index
 
         query = queryContent.base_phrase
-        query += f" WHERE (ROWNUM <= {cfg.databaseRownumLimit}) "
+        if dbFlavor == 'Oracle':
+            query += f" WHERE (ROWNUM <= {cfg.databaseRownumLimit}) "
+        elif dbFlavor == 'PostgreSQL':
+            query += f" WHERE (2 > 1) " #dummy condition
 
         if queryContent.custom_conditions:
             for cond in queryContent.custom_conditions:
@@ -234,6 +237,8 @@ class ClientMainWindow(QtWidgets.QMainWindow):
             query += f" AND ({field} LIKE '{content}') "
         if queryContent.appendix_phrase:
             query += " " + queryContent.appendix_phrase
+        if dbFlavor == 'PostgreSQL':
+            query += f" LIMIT {cfg.databaseRownumLimit} "
         logger.info(query.replace('\n', ' '))
 
         self.querierThreads[queryContent.query_type].querylaunched.emit(tabIndex, query, connIndex)
@@ -384,8 +389,10 @@ class ClientMainWindow(QtWidgets.QMainWindow):
         queryName = self.ui.queryTabs.widget(curTabIndex).queryName
         queryType = cfg.queries[queryName].query_type
 
-        if queryType == QueryType.DB_HLC or queryType == QueryType.DB_TDS:
-            self.launch_database_query(curTabIndex)
+        if queryType == QueryType.DB_HLC:
+            self.launch_database_query(curTabIndex, 'Oracle')
+        elif queryType == QueryType.DB_TDS:
+            self.launch_database_query(curTabIndex, 'PostgreSQL')
         elif queryType == QueryType.ES:
             self.launch_elasticsearch_query(curTabIndex)
         elif queryType == QueryType.REST_HLC:

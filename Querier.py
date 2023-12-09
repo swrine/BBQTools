@@ -1,4 +1,4 @@
-import requests, cx_Oracle, logging
+import requests, cx_Oracle, logging, psycopg2
 from elasticsearch import Elasticsearch
 
 from PyQt5 import QtCore, QtGui
@@ -12,12 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 
-class DatabaseQuerier(QtCore.QObject):
+class OracleQuerier(QtCore.QObject):
     connectionstatusupdated = QtCore.pyqtSignal(QueryType, bool)
     queryfinished = QtCore.pyqtSignal(int, dict)
 
     def __init__(self, dbName = QueryType.UNKNOWN, connectionParameter = None):
-        super(DatabaseQuerier, self).__init__()
+        super(OracleQuerier, self).__init__()
         self.name = dbName
         self.connectionParameter = connectionParameter
         self.dbs = {}
@@ -58,6 +58,54 @@ class DatabaseQuerier(QtCore.QObject):
             result['columns'] = [col[0] for col in self.cursors[connIndex].description]
             result['data'] = []
             for row in self.cursors[connIndex]:
+                result['data'].append([QtGui.QStandardItem(cell if type(cell) == str else str(cell)) for cell in row])
+            self.queryfinished.emit(tabIndex, result)
+        except:
+            logger.exception('DB Query Failed:%s', query)
+
+
+
+class PostgreSqlQuerier(QtCore.QObject):
+    connectionstatusupdated = QtCore.pyqtSignal(QueryType, bool)
+    queryfinished = QtCore.pyqtSignal(int, dict)
+
+    def __init__(self, dbName = QueryType.UNKNOWN, connectionParameter = None):
+        super(PostgreSqlQuerier, self).__init__()
+        self.name = dbName
+        self.connectionParameter = connectionParameter
+        self.db = None
+        self.cursor = None
+        self.connected = False
+
+    def try_connect(self):
+        try:
+            self.db = psycopg2.connect(
+                host=self.connectionParameter.address,
+                database=self.connectionParameter.databasename,
+                port=self.connectionParameter.port,
+                user=self.connectionParameter.username,
+                password=self.connectionParameter.password)
+            self.cursor = self.db.cursor()
+
+            self.connected = True
+            self.connectionstatusupdated.emit(self.name, True)
+        except Exception:
+            self.cursor = self.db = None
+            self.connected = False
+            logger.exception("Connect attempt to Database %s at %s failed.", self.name, self.connectionParameter.address)
+
+    @pyqtSlot()
+    def establish_connection(self):
+        self.try_connect()
+
+    @pyqtSlot(int, str)
+    def launch_query(self, tabIndex, query):
+        result = {}
+        try:
+            self.cursor.execute(query)
+            result['columns'] = [col[0] for col in self.cursor.description]
+            result['data'] = []
+            for row in self.cursor:
                 result['data'].append([QtGui.QStandardItem(cell if type(cell) == str else str(cell)) for cell in row])
             self.queryfinished.emit(tabIndex, result)
         except:

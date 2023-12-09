@@ -15,4 +15,4 @@ QuerierThread = namedtuple('QuerierThread', 'querier, thread, querylaunched')
 
 UnitStateBit = namedtuple('UnitStateBit', 'name, state_bit, negative_bit')
 
-ConnectionParameter = namedtuple('ConnectionParameter', 'address, address_alt, username, password, sid')
+ConnectionParameter = namedtuple('ConnectionParameter', 'address, address_alt, username, password, sid, databasename, port')
