@@ -84,7 +84,7 @@ query-bundles:
           LEFT JOIN plc_unit             plu_curdest ON plu_curdest.ird = bst.current_destination
           LEFT JOIN destination_point    tdp_curdest ON plu_curdest.node_id = tdp_curdest.node_id
           LEFT JOIN crd_mapping          crd_curdest ON crd_curdest.crd = bst.current_destination AND crd_curdest.role = 'defaultRole' and crd_curdest.mapping_type = 'DP'
-          LEFT JOIN plc_unit             plu_lastnp ON plu_lastnp.ird = bst.last_np
+          LEFT JOIN plc_unit             plu_lastnp ON plu_lastnp.ird = SUBSTR(bst.last_np,0,17)
           LEFT JOIN notification_point   tnp_lastnp_orig ON tnp_lastnp_orig.node_id_origin = plu_lastnp.node_id
           LEFT JOIN notification_point   tnp_lastnp_succ ON tnp_lastnp_succ.node_id_successor = plu_lastnp.node_id
     custom-conditions:
