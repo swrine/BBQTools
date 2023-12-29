@@ -4,11 +4,10 @@ elasticsearch-rownum-limit: 8000
 local-timezone-name: 'Asia/Shanghai'
 connection-parameters:
 - query-type: DB_HLC
-  address: '10.50.21.51'
-  address-alt: '10.50.21.52'
+  address: '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=10.50.21.51)(PORT=1521))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=bagos_site1)))'
+  address-alt: '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=10.50.21.52)(PORT=1521))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=bagos_site2)))'
   username: 'bagos'
   password: 'BAGOS_DB_DEFAULT'
-  sid: 'bagos'
 - query-type: DB_TDS
   address: '192.168.5.128'
   username: 'diag'

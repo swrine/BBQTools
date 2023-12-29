@@ -26,7 +26,11 @@ class OracleQuerier(QtCore.QObject):
 
     def try_connect(self, addr, connIndex):
         try:
-            self.dbs[connIndex] = cx_Oracle.connect(self.connectionParameter.username, self.connectionParameter.password, addr+'/'+self.connectionParameter.sid)
+            if self.connectionParameter.sid is not None:
+                connectString = addr + '/' + self.connectionParameter.sid
+            else:
+                connectString = addr
+            self.dbs[connIndex] = cx_Oracle.connect(self.connectionParameter.username, self.connectionParameter.password, connectString)
             self.cursors[connIndex] = self.dbs[connIndex].cursor()
 
             self.connected[connIndex] = True
