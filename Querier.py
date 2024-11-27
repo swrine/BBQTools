@@ -1,5 +1,5 @@
 import requests, cx_Oracle, logging, psycopg2
-from elasticsearch import Elasticsearch
+from elasticsearch7 import Elasticsearch
 
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import pyqtSlot

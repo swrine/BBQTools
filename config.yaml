@@ -15,7 +15,7 @@ connection-parameters:
   databasename: 'postgres'
   port: '1522'
 - query-type: ES
-  address: '10.50.21.106:9200'
+  address: 'http://10.50.21.106:9200'
 - query-type: REST_HLC
   address: '10.50.21.61:8001'
   address-alt: '10.50.21.62:8002'
