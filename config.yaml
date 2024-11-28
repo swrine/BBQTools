@@ -17,8 +17,9 @@ connection-parameters:
 - query-type: ES
   address: 'http://10.50.21.106:9200'
 - query-type: REST_HLC
-  address: '10.50.21.61:8001'
-  address-alt: '10.50.21.62:8002'
+  address: 'https://bagiq.bagosklia.net:443'
+  username: 'SuperUser'
+  password: 'KC_REST_DEFAULT'
 tr-masterdata-filename: 'KMG_trmasterdata.json'
 cf-masterdata-filename: 'KMG_cfmasterdata.csv'
 scada-transition-matrix:

@@ -51,6 +51,8 @@ class ConfigurationManager:
             self.connectionParameters[QueryType.DB_HLC] = self.connectionParameters[QueryType.DB_HLC]._replace(password='bagos-1234')
         if QueryType.REST_HLC in self.connectionParameters and self.connectionParameters[QueryType.REST_HLC].password == 'BAGOS_REST_DEFAULT':
             self.connectionParameters[QueryType.REST_HLC] = self.connectionParameters[QueryType.REST_HLC]._replace(password='change')
+        if QueryType.REST_HLC in self.connectionParameters and self.connectionParameters[QueryType.REST_HLC].password == 'KC_REST_DEFAULT':
+            self.connectionParameters[QueryType.REST_HLC] = self.connectionParameters[QueryType.REST_HLC]._replace(password='Start0815')
         if QueryType.DB_TDS in self.connectionParameters and self.connectionParameters[QueryType.DB_TDS].password == 'TDS_DB_DEFAULT':
             self.connectionParameters[QueryType.DB_TDS] = self.connectionParameters[QueryType.DB_TDS]._replace(password='Start0815')
 

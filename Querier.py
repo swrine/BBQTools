@@ -1,8 +1,8 @@
-import requests, cx_Oracle, logging, psycopg2
+import requests, cx_Oracle, logging, json, psycopg2
 from elasticsearch7 import Elasticsearch
 
 from PyQt5 import QtCore, QtGui
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import pyqtSlot, QTimer
 
 from DomainTypes import QueryType
 
@@ -152,15 +152,59 @@ class RestApiQuerier(QtCore.QObject):
         self.connectionParameter = connectionParameter
         self.connected = False
 
+        self.refreshTimer = QTimer()
+        self.refreshTimer.timeout.connect(self.refresh_token)
+        self.refreshTimer.start(285000) #in milliseconds
+        self.refreshToken = None
+        self.addressConnected = None
+
     def try_connect(self, addr):
         connResponse = None
         try:
-            connResponse = requests.get('http://'+addr+'/bagos/rest/ping', timeout=5)
-            if connResponse and connResponse.status_code == 200 and connResponse.text == "pong":
-                self.connected = True
-                self.baseUrl = 'http://'+addr+'/bagos/rest/'
+            tokenUrl = addr+'/auth/realms/BagIQ/protocol/openid-connect/token'
+            authParams = {
+                'grant_type': 'password',
+                'username': self.connectionParameter.username,
+                'password': self.connectionParameter.password,
+                'client_id': 'BagIQ-CRC',
+                'client_secret': '30e55e1f-8754-49bf-b98a-2d5258e3b53b'
+            }
+
+            connResponse = requests.post(tokenUrl, authParams, verify=False)
+            if connResponse:
+                if connResponse.status_code == 200:
+                    responseContent = connResponse.content.decode('utf-8')
+                    self.accessToken = str(json.loads(responseContent)['access_token'])
+                    self.refreshToken = str(json.loads(responseContent)['refresh_token'])
+                    self.connected = True
+                    self.baseUrl = addr+'/bagos/rest/'
+                    self.addressConnected = addr
+                else:
+                    logger.error('Connection attempt failed with status code %s.', connResponse.status_code)
         except Exception:
             logger.error('Connection attempt to %s failed.', addr)
+
+    def refresh_token(self):
+        if not (self.connected and self.refreshToken):
+            return
+        try:
+            refreshUrl = self.addressConnected + '/auth/realms/BagIQ/protocol/openid-connect/token'
+            refreshData = {
+                'grant_type': 'refresh_token',
+                'client_id': 'BagIQ-CRC',
+                'client_secret': '30e55e1f-8754-49bf-b98a-2d5258e3b53b',
+                'refresh_token': self.refreshToken
+            }
+            response = requests.post(refreshUrl, data=refreshData, timeout=12, verify=False) #timeout in seconds
+            if response and response.status_code == 200:
+                responseContent = response.content.decode('utf-8')
+                logger.info('REST connection token refreshed.')
+                self.accessToken = str(json.loads(responseContent)['access_token'])
+                self.refreshToken = str(json.loads(responseContent)['refresh_token'])
+            else:
+                logger.error('Refreshing token failed with %s response.', response.status_code if response else 'empty')
+        except Exception as e:
+            logger.exception(e)
 
     @pyqtSlot()
     def establish_connection(self):
@@ -177,8 +221,11 @@ class RestApiQuerier(QtCore.QObject):
         try:
             if not self.connected:
                 raise Exception('REST API query failed: Not connected.')
-
-            queryResponse = requests.get(self.baseUrl+query, headers={'Content-Type':'application/json'})
+            requestHeaders = {
+                'Content-Type':'application/json',
+                'Authorization':'Bearer ' + self.accessToken
+            }
+            queryResponse = requests.get(self.baseUrl+query, verify=False, headers=requestHeaders)
 
             if queryResponse.status_code == 200:
                 self.queryfinished.emit(tabIndex, queryResponse.text)
